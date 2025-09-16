@@ -3,16 +3,16 @@
     <!-- 头部 -->
     <div class="header">
       <div class="logo">
-        <i class="fas fa-lock"></i>
+        <Icon name="lock" :width="24" :height="24" />
         <span>SecurePass</span>
       </div>
       <div class="actions">
-        <button class="btn">
-          <i class="fas fa-sync-alt"></i>
+        <button class="btn" @click="syncPasswords" type="button">
+          <Icon name="sync" :width="16" :height="16" />
           <span>同步</span>
         </button>
-        <button class="btn">
-          <i class="fas fa-cog"></i>
+        <button class="btn" @click="openSettings" type="button">
+          <Icon name="cog" :width="16" :height="16" />
           <span>设置</span>
         </button>
       </div>
@@ -21,9 +21,14 @@
     <!-- 搜索区域 -->
     <div class="search-area">
       <div class="search-box">
-        <input type="text" placeholder="搜索密码...">
-        <button>
-          <i class="fas fa-search"></i>
+        <input
+          type="text"
+          placeholder="搜索密码..."
+          v-model="searchQuery"
+          @input="searchPasswords"
+        >
+        <button type="button">
+          <Icon name="search" :width="16" :height="16" />
         </button>
       </div>
     </div>
@@ -32,40 +37,60 @@
     <div class="main-content">
       <!-- 侧边栏 -->
       <div class="sidebar">
-        <div class="nav-item active">
-          <i class="fas fa-key"></i>
+        <div
+          class="nav-item"
+          :class="{ active: activeCategory === 'all' }"
+          @click="setCategory('all')"
+        >
+          <Icon name="key" :width="16" :height="16" />
           <span>所有密码</span>
         </div>
-        <div class="nav-item">
-          <i class="fas fa-star"></i>
+        <div class="nav-item" @click="setCategory('favorite')">
+          <Icon name="star" :width="16" :height="16" />
           <span>收藏夹</span>
         </div>
 
         <div class="category-title">分类</div>
-        <div class="nav-item">
-          <i class="fas fa-globe"></i>
+        <div
+          class="nav-item"
+          :class="{ active: activeCategory === 'website' }"
+          @click="setCategory('website')"
+        >
+          <Icon name="globe" :width="16" :height="16" />
           <span>网站</span>
         </div>
-        <div class="nav-item">
-          <i class="fas fa-credit-card"></i>
+        <div
+          class="nav-item"
+          :class="{ active: activeCategory === 'payment' }"
+          @click="setCategory('payment')"
+        >
+          <Icon name="credit-card" :width="16" :height="16" />
           <span>支付信息</span>
         </div>
-        <div class="nav-item">
-          <i class="fas fa-network-wired"></i>
+        <div
+          class="nav-item"
+          :class="{ active: activeCategory === 'wifi' }"
+          @click="setCategory('wifi')"
+        >
+          <Icon name="network" :width="16" :height="16" />
           <span>Wi-Fi</span>
         </div>
-        <div class="nav-item">
-          <i class="fas fa-mobile-alt"></i>
+        <div
+          class="nav-item"
+          :class="{ active: activeCategory === 'app' }"
+          @click="setCategory('app')"
+        >
+          <Icon name="mobile" :width="16" :height="16" />
           <span>应用</span>
         </div>
 
         <div class="category-title">工具</div>
-        <div class="nav-item">
-          <i class="fas fa-plus-circle"></i>
+        <div class="nav-item" @click="generatePassword">
+          <Icon name="plus-circle" :width="16" :height="16" />
           <span>生成密码</span>
         </div>
-        <div class="nav-item">
-          <i class="fas fa-shield-alt"></i>
+        <div class="nav-item" @click="checkSecurity">
+          <Icon name="shield" :width="16" :height="16" />
           <span>安全检查</span>
         </div>
       </div>
@@ -73,209 +98,22 @@
       <!-- 密码列表 -->
       <div class="password-list">
         <div class="section-title">
-          <h2>所有密码 (12)</h2>
-          <button class="add-btn">
-            <i class="fas fa-plus"></i>
+          <h2>{{ listTitle }}</h2>
+          <button class="add-btn" @click="showAddPasswordModal" type="button">
+            <Icon name="plus" :width="16" :height="16" />
             <span>添加新密码</span>
           </button>
         </div>
 
         <div class="password-grid">
-          <!-- 密码卡片 1 -->
-          <div class="password-card">
-            <div class="card-header">
-              <div class="icon-container">
-                <i class="fab fa-google"></i>
-              </div>
-              <div class="card-title">
-                <h3>Google 账户</h3>
-                <p>john.doe@gmail.com</p>
-              </div>
-            </div>
-
-            <div class="password-field">
-              <input type="password" value="••••••••" readonly>
-              <button class="toggle-password">
-                <i class="fas fa-eye"></i>
-              </button>
-              <button class="copy-password">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-
-            <div class="strength-indicator strength-strong">
-              <span>密码强度:</span>
-              <div class="strength-dots">
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-              </div>
-              <span>强</span>
-            </div>
-
-            <div class="card-actions">
-              <button class="action-btn">
-                <i class="fas fa-edit"></i>
-                <span>编辑</span>
-              </button>
-              <button class="action-btn">
-                <i class="fas fa-star"></i>
-                <span>收藏</span>
-              </button>
-              <button class="action-btn">
-                <i class="fas fa-trash-alt"></i>
-                <span>删除</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 密码卡片 2 -->
-          <div class="password-card">
-            <div class="card-header">
-              <div class="icon-container">
-                <i class="fab fa-facebook"></i>
-              </div>
-              <div class="card-title">
-                <h3>Facebook</h3>
-                <p>john.doe@facebook.com</p>
-              </div>
-            </div>
-
-            <div class="password-field">
-              <input type="password" value="••••••••" readonly>
-              <button class="toggle-password">
-                <i class="fas fa-eye"></i>
-              </button>
-              <button class="copy-password">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-
-            <div class="strength-indicator strength-medium">
-              <span>密码强度:</span>
-              <div class="strength-dots">
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-              </div>
-              <span>中</span>
-            </div>
-
-            <div class="card-actions">
-              <button class="action-btn">
-                <i class="fas fa-edit"></i>
-                <span>编辑</span>
-              </button>
-              <button class="action-btn">
-                <i class="far fa-star"></i>
-                <span>收藏</span>
-              </button>
-              <button class="action-btn">
-                <i class="fas fa-trash-alt"></i>
-                <span>删除</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 密码卡片 3 -->
-          <div class="password-card">
-            <div class="card-header">
-              <div class="icon-container">
-                <i class="fab fa-amazon"></i>
-              </div>
-              <div class="card-title">
-                <h3>Amazon</h3>
-                <p>john.doe@amazon.com</p>
-              </div>
-            </div>
-
-            <div class="password-field">
-              <input type="password" value="••••••••" readonly>
-              <button class="toggle-password">
-                <i class="fas fa-eye"></i>
-              </button>
-              <button class="copy-password">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-
-            <div class="strength-indicator strength-weak">
-              <span>密码强度:</span>
-              <div class="strength-dots">
-                <div class="dot active"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-              </div>
-              <span>弱</span>
-            </div>
-
-            <div class="card-actions">
-              <button class="action-btn">
-                <i class="fas fa-edit"></i>
-                <span>编辑</span>
-              </button>
-              <button class="action-btn">
-                <i class="far fa-star"></i>
-                <span>收藏</span>
-              </button>
-              <button class="action-btn">
-                <i class="fas fa-trash-alt"></i>
-                <span>删除</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 密码卡片 4 -->
-          <div class="password-card">
-            <div class="card-header">
-              <div class="icon-container">
-                <i class="fas fa-wifi"></i>
-              </div>
-              <div class="card-title">
-                <h3>家庭 Wi-Fi</h3>
-                <p>TP-Link_5G</p>
-              </div>
-            </div>
-
-            <div class="password-field">
-              <input type="password" value="••••••••" readonly>
-              <button class="toggle-password">
-                <i class="fas fa-eye"></i>
-              </button>
-              <button class="copy-password">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-
-            <div class="strength-indicator strength-strong">
-              <span>密码强度:</span>
-              <div class="strength-dots">
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-                <div class="dot active"></div>
-              </div>
-              <span>强</span>
-            </div>
-
-            <div class="card-actions">
-              <button class="action-btn">
-                <i class="fas fa-edit"></i>
-                <span>编辑</span>
-              </button>
-              <button class="action-btn">
-                <i class="fas fa-star"></i>
-                <span>收藏</span>
-              </button>
-              <button class="action-btn">
-                <i class="fas fa-trash-alt"></i>
-                <span>删除</span>
-              </button>
-            </div>
-          </div>
+          <PasswordCard
+            v-for="password in filteredPasswords"
+            :key="password.id"
+            :password="password"
+            @edit="editPassword"
+            @delete="deletePassword"
+            @toggle-favorite="toggleFavorite"
+          />
         </div>
       </div>
     </div>
@@ -283,32 +121,47 @@
     <!-- 安全状态栏 -->
     <div class="security-bar">
       <div class="security-status">
-        <i class="fas fa-shield-alt"></i>
+        <Icon name="shield" :width="16" :height="16" />
         <span>保险库已锁定</span>
       </div>
       <div class="lock-status">
-        <i class="fas fa-clock"></i>
+        <Icon name="clock" :width="16" :height="16" />
         <span>自动锁定: 5分钟</span>
       </div>
     </div>
+
+    <!-- 密码模态框 -->
+    <PasswordModal
+      :visible="showModal"
+      :password="editingPassword"
+      :is-editing="!!editingPassword"
+      @close="closeModal"
+      @save="savePassword"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import PasswordCard from './PasswordCard.vue'
+import PasswordModal from './PasswordModal.vue'
+import Icon from './Icon.vue'
 
 // 定义接口
 interface Password {
-  id: number;
-  service: string;
-  username: string;
-  password: string;
-  category: string;
-  strength: string;
-  notes?: string;
-  url?: string;
-  createdAt: string;
-  updatedAt: string;
+  id: number
+  service: string
+  username: string
+  password: string
+  category: string
+  strength: string
+  notes?: string
+  url?: string
+  createdAt: string
+  updatedAt: string
+  isFavorited?: boolean
+  icon: string
+  color: string
 }
 
 // 响应式数据
@@ -323,7 +176,9 @@ const filteredPasswords = computed(() => {
   let filtered = passwords.value
 
   // 按类别过滤
-  if (activeCategory.value !== 'all') {
+  if (activeCategory.value === 'favorite') {
+    filtered = filtered.filter(p => p.isFavorited)
+  } else if (activeCategory.value !== 'all') {
     filtered = filtered.filter(p => p.category === activeCategory.value)
   }
 
@@ -341,16 +196,17 @@ const filteredPasswords = computed(() => {
 
 const listTitle = computed(() => {
   if (activeCategory.value === 'all') return `所有密码 (${filteredPasswords.value.length})`
+  if (activeCategory.value === 'favorite') return `收藏夹 (${filteredPasswords.value.length})`
   const category = categories.find(c => c.id === activeCategory.value)
   return `${category?.name} (${filteredPasswords.value.length})`
 })
 
 // 分类数据
 const categories = [
-  { id: 'website', name: '网站', icon: 'fas fa-globe' },
-  { id: 'payment', name: '支付信息', icon: 'fas fa-credit-card' },
-  { id: 'wifi', name: 'Wi-Fi', icon: 'fas fa-network-wired' },
-  { id: 'app', name: '应用', icon: 'fas fa-mobile-alt' }
+  { id: 'website', name: '网站', icon: 'globe' },
+  { id: 'payment', name: '支付信息', icon: 'credit-card' },
+  { id: 'wifi', name: 'Wi-Fi', icon: 'network' },
+  { id: 'app', name: '应用', icon: 'mobile' }
 ]
 
 // 生命周期
@@ -359,7 +215,7 @@ onMounted(async () => {
 })
 
 // 方法
-const loadPasswords = async () => {
+const loadPasswords = async (): Promise<void> => {
   try {
     passwords.value = await window.api.password.getPasswords()
   } catch (error) {
@@ -367,65 +223,79 @@ const loadPasswords = async () => {
   }
 }
 
-const setCategory = (category: string) => {
+const setCategory = (category: string): void => {
   activeCategory.value = category
 }
 
-const searchPasswords = () => {
+const searchPasswords = (): void => {
   // 搜索逻辑已在计算属性中处理
 }
 
-const showAddPasswordModal = () => {
+const showAddPasswordModal = (): void => {
   editingPassword.value = null
   showModal.value = true
 }
 
-const editPassword = (password: Password) => {
+const editPassword = (password: Password): void => {
   editingPassword.value = { ...password }
   showModal.value = true
 }
 
-const closeModal = () => {
+const toggleFavorite = async (id: number): Promise<void> => {
+  try {
+    await window.api.password.toggleFavorite(id)
+    await loadPasswords()
+  } catch (error) {
+    console.error('Failed to toggle favorite:', error)
+  }
+}
+
+const closeModal = (): void => {
   showModal.value = false
   editingPassword.value = null
 }
 
-const savePassword = async (passwordData: any) => {
+const savePassword = async (passwordData: any): Promise<void> => {
   try {
-    if (editingPassword.value?.id) {
-      await window.api.password.updatePassword(editingPassword.value.id, passwordData)
+    if (passwordData.id) {
+      // 更新现有密码 - 修复参数传递方式
+      await window.api.password.updatePassword(passwordData.id, passwordData)
     } else {
+      // 新增密码
       await window.api.password.addPassword(passwordData)
     }
+    // 确保在保存后刷新密码列表
     await loadPasswords()
     closeModal()
   } catch (error) {
     console.error('Failed to save password:', error)
+    // 在实际应用中，这里应该显示错误消息给用户
   }
 }
 
-const deletePassword = async (id: number) => {
+const deletePassword = async (id: number): Promise<void> => {
   try {
     await window.api.password.deletePassword(id)
     await loadPasswords()
   } catch (error) {
     console.error('Failed to delete password:', error)
+    // 在实际应用中，这里应该显示错误消息给用户
   }
 }
 
-const syncPasswords = () => {
+const syncPasswords = (): void => {
   console.log('Syncing passwords...')
 }
 
-const openSettings = () => {
+const openSettings = (): void => {
   console.log('Opening settings...')
 }
 
-const generatePassword = () => {
+const generatePassword = (): void => {
   console.log('Generating password...')
 }
 
-const checkSecurity = () => {
+const checkSecurity = (): void => {
   console.log('Checking security...')
 }
 </script>
@@ -540,6 +410,10 @@ body {
   font-size: 1rem;
 }
 
+.search-box input:focus {
+  outline: none;
+}
+
 .search-box button {
   background: var(--primary);
   color: white;
@@ -571,6 +445,7 @@ body {
   gap: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
+  user-select: none;
 }
 
 .nav-item:hover {
@@ -627,6 +502,7 @@ body {
   gap: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  z-index: 10;
 }
 
 .add-btn:hover {
@@ -637,148 +513,6 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
-}
-
-.password-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 20px;
-  border: 1px solid var(--border);
-  transition: all 0.3s ease;
-}
-
-.password-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
-  border-color: var(--primary);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.icon-container {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.5rem;
-}
-
-.card-title {
-  flex: 1;
-}
-
-.card-title h3 {
-  font-size: 1.1rem;
-  margin-bottom: 4px;
-}
-
-.card-title p {
-  color: var(--gray);
-  font-size: 0.9rem;
-}
-
-.password-field {
-  background: var(--light);
-  border-radius: 8px;
-  padding: 12px 15px;
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.password-field input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-family: 'Courier New', monospace;
-  font-size: 1rem;
-  color: var(--dark);
-}
-
-.password-field input:focus {
-  outline: none;
-}
-
-.password-field button {
-  background: transparent;
-  border: none;
-  color: var(--gray);
-  cursor: pointer;
-  padding: 5px;
-}
-
-.password-field button:hover {
-  color: var(--primary);
-}
-
-.card-actions {
-  display: flex;
-  justify-content: space-between;
-}
-
-.action-btn {
-  background: transparent;
-  border: none;
-  color: var(--gray);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  background: rgba(67, 97, 238, 0.1);
-  color: var(--primary);
-}
-
-.strength-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  margin-top: 10px;
-  color: var(--gray);
-}
-
-.strength-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-}
-
-.dot.active {
-  background: var(--success);
-}
-
-.strength-weak .dot.active {
-  background: var(--warning);
-}
-
-.strength-medium .dot:nth-child(-n+2) {
-  background: orange;
-}
-
-.strength-strong .dot {
-  background: var(--success);
 }
 
 /* 安全状态栏 */
@@ -807,27 +541,6 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .password-manager {
-    height: auto;
-  }
-
-  .main-content {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .password-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* 中等屏幕设备适配 (900px-1200px) */
@@ -926,6 +639,27 @@ body {
 
   .card-title p {
     font-size: 16px;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .password-manager {
+    height: auto;
+  }
+
+  .main-content {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .password-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
