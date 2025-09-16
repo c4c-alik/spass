@@ -1,13 +1,88 @@
 @import './base.css';
+@import './theme.css';
 
 body {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   overflow: hidden;
-  background-image: url('./wavy-lines.svg');
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   background-size: cover;
   user-select: none;
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* 固定根字体大小，防止页面缩放时字体变化 */
+html {
+  font-size: 16px;
+}
+
+/* 使用固定像素值替代rem单位，防止页面缩放时字体变化 */
+@media (min-width: 1200px) {
+  html {
+    font-size: 16px;
+  }
+  
+  .section-title h2 {
+    font-size: 24px;
+  }
+  
+  .password-card {
+    padding: 25px;
+  }
+}
+
+@media (min-width: 1400px) {
+  html {
+    font-size: 16px;
+  }
+  
+  .section-title h2 {
+    font-size: 28px;
+  }
+  
+  .password-card {
+    padding: 30px;
+  }
+  
+  .card-title h3 {
+    font-size: 20px;
+  }
+  
+  .card-title p {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1800px) {
+  html {
+    font-size: 16px;
+  }
+  
+  .section-title h2 {
+    font-size: 32px;
+  }
+  
+  .password-card {
+    padding: 35px;
+  }
+  
+  .card-title h3 {
+    font-size: 22px;
+  }
+  
+  .card-title p {
+    font-size: 18px;
+  }
 }
 
 code {
@@ -15,23 +90,14 @@ code {
   padding: 3px 5px;
   border-radius: 2px;
   background-color: var(--color-background-mute);
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    SF Mono,
-    Menlo,
-    Consolas,
-    Liberation Mono,
-    monospace;
+  font-family: ui-monospace,
+  SFMono-Regular,
+  SF Mono,
+  Menlo,
+  Consolas,
+  Liberation Mono,
+  monospace;
   font-size: 85%;
-}
-
-#app {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  margin-bottom: 80px;
 }
 
 .logo {
@@ -146,6 +212,7 @@ code {
   font-size: 14px;
   line-height: 14px;
   opacity: 0.8;
+
   &:last-child {
     border: none;
   }

@@ -1,7 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import PasswordDatabase from '../database'
+
+let db
 
 function createWindow(): void {
   // Create the browser window.
@@ -52,9 +55,13 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // 初始化数据库
+  // 初始化数据库
+  db = new PasswordDatabase()
+
   createWindow()
 
-  app.on('activate', function () {
+  app.on('activate', function() {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -72,3 +79,25 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+
+// IPC 通信处理
+ipcMain.handle('get-passwords', async () => {
+  return await db.getPasswords()
+})
+
+ipcMain.handle('add-password', async (event, passwordData) => {
+  return await db.addPassword(passwordData)
+})
+
+ipcMain.handle('delete-password', async (event, id) => {
+  return await db.deletePassword(id)
+})
+
+ipcMain.handle('update-password', async (event, passwordData) => {
+  return await db.updatePassword(passwordData)
+})
