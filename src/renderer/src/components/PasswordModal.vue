@@ -3,8 +3,8 @@
     <div class="password-modal">
       <div class="modal-header">
         <h2>{{ isEditing ? '编辑密码' : '添加新密码' }}</h2>
-        <button class="close-btn" @click="closeModal">
-          <i class="fas fa-times"></i>
+        <button class="close-btn" @click="closeModal" type="button">
+          <Icon name="x" :width="24" :height="24" />
         </button>
       </div>
 
@@ -16,6 +16,7 @@
             id="title"
             v-model="formData.title"
             placeholder="例如：Google、Facebook"
+            required
           >
         </div>
 
@@ -26,6 +27,7 @@
             id="username"
             v-model="formData.username"
             placeholder="输入用户名或邮箱"
+            required
           >
         </div>
 
@@ -37,35 +39,52 @@
               id="password"
               v-model="formData.password"
               placeholder="输入密码"
+              required
             >
-            <button class="toggle-password" @click="showPassword = !showPassword">
-              <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            <button class="toggle-password" @click="showPassword = !showPassword" type="button">
+              <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="20" :height="20" />
             </button>
-            <button class="generate-password" @click="generatePassword">
-              <i class="fas fa-dice"></i>
+            <button class="generate-password" @click="generatePassword" type="button">
+              <Icon name="dice" :width="20" :height="20" />
             </button>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="website">网站地址 (可选)</label>
+          <label for="url">网站地址 (可选)</label>
           <input
             type="url"
-            id="website"
-            v-model="formData.website"
+            id="url"
+            v-model="formData.url"
             placeholder="https://"
           >
         </div>
 
         <div class="form-group">
           <label for="category">分类</label>
-          <select id="category" v-model="formData.category">
-            <option value="website">网站</option>
-            <option value="payment">支付信息</option>
-            <option value="wifi">Wi-Fi</option>
-            <option value="app">应用</option>
-            <option value="other">其他</option>
+          <select 
+            id="category" 
+            v-model="formData.category" 
+            @focus="showAllOptions = true"
+            @blur="showAllOptions = false"
+          >
+            <option value="">选择或输入分类</option>
+            <option 
+              v-for="category in (showAllOptions ? allCategories : filteredCategories)" 
+              :key="category.value" 
+              :value="category.value"
+            >
+              {{ category.label }}
+            </option>
           </select>
+          <!-- 隐藏输入框用于捕获用户输入 -->
+          <input
+            type="text"
+            class="hidden-category-input"
+            v-model="formData.category"
+            placeholder="输入自定义分类"
+            @input="handleCategoryInput"
+          />
         </div>
 
         <div class="password-strength">
@@ -80,47 +99,58 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="closeModal">取消</button>
-        <button class="btn btn-primary" @click="savePassword">{{ isEditing ? '更新' : '保存' }}</button>
+        <button class="btn btn-secondary" @click="closeModal" type="button">取消</button>
+        <button class="btn btn-primary" @click="savePassword" type="button">{{ isEditing ? '更新' : '保存' }}</button>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from 'vue'
+import Icon from './Icon.vue'
+
+export default defineComponent({
   name: 'PasswordModal',
+  components: {
+    Icon
+  },
   props: {
     visible: {
       type: Boolean,
       default: false
     },
-    editingPassword: {
+    password: {
       type: Object,
       default: null
+    },
+    isEditing: {
+      type: Boolean,
+      default: false
     }
   },
+  emits: ['close', 'save'],
   data() {
     return {
       formData: {
-        id: null,
         title: '',
         username: '',
         password: '',
-        website: '',
-        category: 'website',
-        strength: 'weak',
-        isFavorited: false,
-        icon: 'fas fa-key',
-        color: '#4361ee'
+        url: '',
+        category: ''
       },
-      showPassword: false
+      showPassword: false,
+      showAllOptions: false, // 控制是否显示所有选项
+      predefinedCategories: [ // 预定义的分类
+        { value: 'website', label: '网站' },
+        { value: 'payment', label: '支付信息' },
+        { value: 'wifi', label: 'Wi-Fi' },
+        { value: 'app', label: '应用' },
+        { value: 'other', label: '其他' }
+      ]
     }
   },
   computed: {
-    isEditing() {
-      return !!this.editingPassword
-    },
     passwordStrength() {
       if (!this.formData.password) return 'weak'
 
@@ -148,18 +178,60 @@ export default {
         'strong': '强'
       }
       return strengthMap[this.passwordStrength]
+    },
+    // 根据用户输入过滤分类选项
+    filteredCategories() {
+      if (!this.formData.category) {
+        return this.predefinedCategories
+      }
+      
+      // 查找匹配的预定义分类
+      const matchedCategories = this.predefinedCategories.filter(category => 
+        category.label.includes(this.formData.category) || 
+        category.value.includes(this.formData.category)
+      )
+      
+      // 如果输入的不是预定义分类，则添加为新分类
+      if (!this.predefinedCategories.some(c => c.value === this.formData.category)) {
+        return [
+          { value: this.formData.category, label: `新增: ${this.formData.category}` },
+          ...matchedCategories
+        ]
+      }
+      
+      return matchedCategories
+    },
+    // 所有分类（包括预定义和用户输入的）
+    allCategories() {
+      // 如果当前输入不是预定义分类，则添加到列表顶部
+      if (this.formData.category && !this.predefinedCategories.some(c => c.value === this.formData.category)) {
+        return [
+          { value: this.formData.category, label: `新增: ${this.formData.category}` },
+          ...this.predefinedCategories
+        ]
+      }
+      return this.predefinedCategories
     }
   },
   watch: {
     visible(newVal) {
       if (newVal) {
-        if (this.editingPassword) {
+        if (this.isEditing && this.password) {
           // 编辑模式：填充表单数据
-          this.formData = { ...this.editingPassword }
+          this.formData = {
+            title: this.password.service || '',
+            username: this.password.username || '',
+            password: this.password.password || '',
+            url: this.password.url || '',
+            category: this.password.category || ''
+          }
         } else {
           // 添加模式：重置表单
           this.resetForm()
         }
+      } else {
+        // 模态框关闭时重置状态
+        this.showAllOptions = false
       }
     }
   },
@@ -168,69 +240,92 @@ export default {
       this.$emit('close')
     },
     savePassword() {
-      // 更新密码强度
-      this.formData.strength = this.passwordStrength
-
-      // 设置图标和颜色基于分类
-      this.setIconAndColor()
-
-      if (this.isEditing) {
-        this.$emit('update', { ...this.formData })
-      } else {
-        // 生成唯一ID（在实际应用中应由后端生成）
-        this.formData.id = Date.now().toString()
-        this.$emit('create', { ...this.formData })
+      // 验证必填字段
+      if (!this.formData.title || !this.formData.username || !this.formData.password) {
+        console.error('请填写所有必填字段')
+        return
       }
 
-      this.closeModal()
+      // 确保分类有默认值
+      if (!this.formData.category) {
+        this.formData.category = 'other'
+      }
+
+      // 准备保存的数据
+      const passwordData = {
+        service: this.formData.title,
+        username: this.formData.username,
+        password: this.formData.password,
+        url: this.formData.url || '',
+        category: this.formData.category,
+        strength: this.passwordStrength
+      }
+
+      // 如果是编辑模式且有原始密码对象，包含ID
+      if (this.isEditing && this.password) {
+        // 发送ID和更新的数据，确保ID在对象顶层
+        this.$emit('save', {
+          ...passwordData,
+          id: this.password.id
+        })
+      } else {
+        // 添加新密码
+        this.$emit('save', passwordData)
+      }
     },
     resetForm() {
       this.formData = {
-        id: null,
         title: '',
         username: '',
         password: '',
-        website: '',
-        category: 'website',
-        strength: 'weak',
-        isFavorited: false,
-        icon: 'fas fa-key',
-        color: '#4361ee'
+        url: '',
+        category: ''
       }
     },
     generatePassword() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()'
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
       let password = ''
-
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 16; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length))
       }
-
       this.formData.password = password
     },
-    setIconAndColor() {
-      const categoryConfig = {
-        'website': { icon: 'fas fa-globe', color: '#4361ee' },
-        'payment': { icon: 'fas fa-credit-card', color: '#f72585' },
-        'wifi': { icon: 'fas fa-wifi', color: '#4cc9f0' },
-        'app': { icon: 'fas fa-mobile-alt', color: '#3f37c9' },
-        'other': { icon: 'fas fa-key', color: '#6c757d' }
-      }
-
-      const config = categoryConfig[this.formData.category] || categoryConfig.other
-      this.formData.icon = config.icon
-      this.formData.color = config.color
-    },
     isStrengthDotActive(index) {
-      const activeDotsMap = {
-        'weak': 1,
-        'medium': 2,
-        'strong': 4
+      if (this.passwordStrength === 'weak') {
+        return index === 1
+      } else if (this.passwordStrength === 'medium') {
+        return index <= 2
+      } else {
+        return index <= 4
       }
-      return index <= activeDotsMap[this.passwordStrength]
+    },
+    setIconAndColor() {
+      const categoryIcons = {
+        'website': 'globe',
+        'payment': 'credit-card',
+        'wifi': 'network',
+        'app': 'mobile',
+        'other': 'key'
+      }
+      
+      const categoryColors = {
+        'website': '#4361ee',
+        'payment': '#f72585',
+        'wifi': '#4cc9f0',
+        'app': '#3f37c9',
+        'other': '#6c757d'
+      }
+      
+      this.formData.icon = categoryIcons[this.formData.category] || 'key'
+      this.formData.color = categoryColors[this.formData.category] || '#4361ee'
+    },
+    // 处理分类输入
+    handleCategoryInput() {
+      // 用户输入时显示匹配的选项
+      this.showAllOptions = false
     }
   }
-}
+})
 </script>
 
 <style scoped>
@@ -238,51 +333,50 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 20px;
 }
 
 .password-modal {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #dee2e6;
 }
 
 .modal-header h2 {
+  margin: 0;
   font-size: 1.5rem;
-  font-weight: 600;
-  color: #212529;
+  color: #333;
 }
 
 .close-btn {
-  background: transparent;
+  background: none;
   border: none;
-  font-size: 1.2rem;
-  color: #6c757d;
+  font-size: 1.5rem;
   cursor: pointer;
-  padding: 5px;
+  color: #999;
+  transition: color 0.2s;
 }
 
 .close-btn:hover {
-  color: #212529;
+  color: #333;
 }
 
 .modal-body {
@@ -291,23 +385,25 @@ export default {
 
 .form-group {
   margin-bottom: 20px;
+  position: relative;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #212529;
+  color: #555;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #dee2e6;
+  padding: 12px;
+  border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 1rem;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -316,83 +412,61 @@ export default {
   border-color: #4361ee;
 }
 
+/* 可编辑下拉框样式 */
+.form-group select {
+  appearance: none; /* 移除默认箭头 */
+  padding-right: 40px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+/* 隐藏的分类输入框 */
+.hidden-category-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% - 40px);
+  height: 100%;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  pointer-events: none; /* 默认不响应事件 */
+  z-index: 1;
+}
+
+.form-group:focus-within .hidden-category-input {
+  pointer-events: auto; /* 获得焦点时响应事件 */
+}
+
 .password-input-group {
-  position: relative;
   display: flex;
-  align-items: center;
+  gap: 10px;
 }
 
 .password-input-group input {
-  padding-right: 80px;
+  flex: 1;
 }
 
-.toggle-password,
-.generate-password {
-  position: absolute;
-  right: 40px;
-  background: transparent;
-  border: none;
-  color: #6c757d;
-  cursor: pointer;
-  padding: 5px;
-}
-
-.generate-password {
-  right: 10px;
-}
-
-.toggle-password:hover,
-.generate-password:hover {
-  color: #4361ee;
-}
-
-.password-strength {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 20px;
-  padding: 10px;
-  background: #f8f9fa;
+.password-input-group button {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
   border-radius: 8px;
+  padding: 0 15px;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.strength-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.strength-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #dee2e6;
-}
-
-.dot.active {
-  background: #4cc9f0;
-}
-
-.strength-weak .dot.active {
-  background: #f72585;
-}
-
-.strength-medium .dot:nth-child(-n+2).active {
-  background: orange;
-}
-
-.strength-strong .dot.active {
-  background: #4cc9f0;
+.password-input-group button:hover {
+  background: #e0e0e0;
 }
 
 .modal-footer {
   padding: 20px;
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid #eee;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -402,18 +476,18 @@ export default {
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  font-size: 1rem;
+  transition: background 0.2s;
 }
 
 .btn-secondary {
-  background: #f8f9fa;
-  color: #212529;
+  background: #f0f0f0;
+  color: #333;
 }
 
 .btn-secondary:hover {
-  background: #e9ecef;
+  background: #e0e0e0;
 }
 
 .btn-primary {
@@ -422,6 +496,48 @@ export default {
 }
 
 .btn-primary:hover {
-  background: #3f37c9;
+  background: #3a56e0;
+}
+
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.strength-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.strength-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ddd;
+}
+
+.dot.active {
+  background: #f72585;
+}
+
+.strength-weak .dot:nth-child(1).active {
+  background: #f72585;
+}
+
+.strength-medium .dot:nth-child(1).active,
+.strength-medium .dot:nth-child(2).active {
+  background: #f7b924;
+}
+
+.strength-strong .dot.active {
+  background: #4cc9f0;
 }
 </style>

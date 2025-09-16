@@ -2,7 +2,7 @@
   <div class="password-card" :class="{'favorited': password.isFavorited}">
     <div class="card-header">
       <div class="icon-container" :style="{ background: password.color }">
-        <i :class="password.icon"></i>
+        <Icon :name="password.icon" :width="24" :height="24" />
       </div>
       <div class="card-title">
         <h3>{{ password.title }}</h3>
@@ -12,11 +12,11 @@
 
     <div class="password-field">
       <input :type="showPassword ? 'text' : 'password'" :value="showPassword ? password.password : '••••••••'" readonly>
-      <button class="toggle-password" @click="togglePasswordVisibility">
-        <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+      <button class="toggle-password" @click="togglePasswordVisibility" type="button">
+        <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="20" :height="20" />
       </button>
-      <button class="copy-password" @click="copyPassword">
-        <i :class="copyStatus === 'success' ? 'fas fa-check' : 'fas fa-copy'"></i>
+      <button class="copy-password" @click="copyPassword" type="button">
+        <Icon :name="copyStatus === 'success' ? 'check' : 'copy'" :width="20" :height="20" />
       </button>
     </div>
 
@@ -29,16 +29,16 @@
     </div>
 
     <div class="card-actions">
-      <button class="action-btn" @click="$emit('edit', password)">
-        <i class="fas fa-edit"></i>
+      <button class="action-btn" @click="$emit('edit', password)" type="button">
+        <Icon name="edit" :width="16" :height="16" />
         <span>编辑</span>
       </button>
-      <button class="action-btn" @click="toggleFavorite">
-        <i :class="password.isFavorited ? 'fas fa-star' : 'far fa-star'"></i>
+      <button class="action-btn" @click="toggleFavorite" type="button">
+        <Icon :name="password.isFavorited ? 'star-filled' : 'star'" :width="16" :height="16" />
         <span>{{ password.isFavorited ? '取消收藏' : '收藏' }}</span>
       </button>
-      <button class="action-btn" @click="$emit('delete', password.id)">
-        <i class="fas fa-trash-alt"></i>
+      <button class="action-btn" @click="$emit('delete', password.id)" type="button">
+        <Icon name="trash" :width="16" :height="16" />
         <span>删除</span>
       </button>
     </div>
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import Icon from './Icon.vue'
 
 const props = defineProps({
   password: {

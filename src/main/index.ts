@@ -9,8 +9,8 @@ let db
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1200,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -87,7 +87,7 @@ app.on('window-all-closed', () => {
 
 // IPC 通信处理
 ipcMain.handle('get-passwords', async () => {
-  return await db.getPasswords()
+  return await db.getAllPasswords()
 })
 
 ipcMain.handle('add-password', async (event, passwordData) => {
@@ -98,6 +98,11 @@ ipcMain.handle('delete-password', async (event, id) => {
   return await db.deletePassword(id)
 })
 
-ipcMain.handle('update-password', async (event, passwordData) => {
-  return await db.updatePassword(passwordData)
+ipcMain.handle('update-password', async (event, arg) => {
+  const { id, passwordData } = arg
+  return await db.updatePassword(id, passwordData)
+})
+
+ipcMain.handle('search-passwords', async (event, query) => {
+  return await db.searchPasswords(query)
 })
