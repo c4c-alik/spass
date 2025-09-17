@@ -17,6 +17,10 @@
           <Icon name="cog" :width="24" :height="24" />
           <span>设置</span>
         </button>
+        <!-- 汉堡菜单按钮 -->
+        <button class="btn hamburger-btn" @click="toggleSidebar" type="button">
+          <Icon name="menu" :width="24" :height="24" />
+        </button>
       </div>
     </div>
 
@@ -38,7 +42,7 @@
     <!-- 主内容区 -->
     <div class="main-content">
       <!-- 侧边栏 -->
-      <div class="sidebar">
+      <div class="sidebar" :class="{ 'sidebar-hidden': isSidebarHidden }">
         <div
           class="nav-item"
           :class="{ active: activeCategory === 'all' }"
@@ -172,6 +176,7 @@ const searchQuery = ref('')
 const activeCategory = ref('all')
 const showModal = ref(false)
 const editingPassword = ref<Password | null>(null)
+const isSidebarHidden = ref(false) // 默认显示侧边栏，只在小屏幕上通过汉堡菜单控制隐藏
 
 // 计算属性
 const filteredPasswords = computed(() => {
@@ -300,6 +305,10 @@ const generatePassword = (): void => {
 const checkSecurity = (): void => {
   console.log('Checking security...')
 }
+
+const toggleSidebar = (): void => {
+  isSidebarHidden.value = !isSidebarHidden.value
+}
 </script>
 
 <style scoped>
@@ -405,6 +414,10 @@ body {
   z-index: 2;
 }
 
+.hamburger-btn {
+  display: none; /* 默认隐藏汉堡菜单按钮 */
+}
+
 .btn {
   background: rgba(255, 255, 255, 0.15);
   color: white;
@@ -442,24 +455,9 @@ body {
   animation: pulse 2s infinite;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .header {
-    padding: 6px 12px;
-  }
-
-  .btn span {
-    display: none;
-  }
-
-  .btn {
-    padding: 6px;
-  }
-}
-
 /* 搜索区域 */
 .search-area {
-  padding: 20px;
+  padding: 15px;
   background: white;
   border-bottom: 1px solid var(--border);
 }
@@ -474,7 +472,7 @@ body {
 .search-box input {
   flex: 1;
   border: none;
-  padding: 14px 20px;
+  padding: 12px 15px;
   background: transparent;
   font-size: 1rem;
 }
@@ -504,7 +502,11 @@ body {
   background: var(--light);
   border-right: 1px solid var(--border);
   padding: 20px 0;
-  overflow-y: auto;
+  overflow-y: auto; /* 添加垂直滚动条 */
+}
+
+.sidebar-hidden {
+  display: none;
 }
 
 .nav-item {
@@ -714,11 +716,11 @@ body {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .password-manager {
-    height: auto;
+    height: 100vh; /* 确保在小屏幕上也填满整个视口 */
   }
 
   .header {
-    padding: 20px 25px;
+    padding: 10px 15px;
   }
 
   .btn span {
@@ -726,21 +728,50 @@ body {
   }
 
   .btn {
-    padding: 12px;
+    padding: 6px;
+  }
+
+  .hamburger-btn {
+    display: flex; /* 在小屏幕上显示汉堡菜单按钮 */
   }
 
   .main-content {
     flex-direction: column;
+    flex: 1;
+    height: calc(100vh - 140px); /* 减去头部和安全栏的高度 */
   }
 
   .sidebar {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    max-height: 300px;
+    overflow-y: auto; /* 改为自动滚动，使菜单可以独立滚动 */
+  }
+
+  .sidebar-hidden {
+    display: none;
+  }
+
+  .password-list {
+    overflow-y: auto; /* 确保小屏幕上的密码列表有滚动条 */
+    flex: 1;
+    min-height: 0; /* 允许收缩以适应容器 */
   }
 
   .password-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 在大屏幕上默认隐藏汉堡菜单按钮 */
+@media (min-width: 769px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+
+  .sidebar-hidden {
+    display: block !important;
   }
 }
 </style>
