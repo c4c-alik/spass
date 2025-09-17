@@ -13,10 +13,10 @@
     <div class="password-field">
       <input :type="showPassword ? 'text' : 'password'" :value="showPassword ? password.password : '••••••••'" readonly>
       <button class="toggle-password" @click="togglePasswordVisibility" type="button">
-        <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="20" :height="20" />
+        <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
       </button>
       <button class="copy-password" @click="copyPassword" type="button">
-        <Icon :name="copyStatus === 'success' ? 'check' : 'copy'" :width="20" :height="20" />
+        <Icon :name="copyStatus === 'success' ? 'check' : 'copy'" :width="24" :height="24" />
       </button>
     </div>
 
@@ -30,15 +30,15 @@
 
     <div class="card-actions">
       <button class="action-btn" @click="$emit('edit', password)" type="button">
-        <Icon name="edit" :width="16" :height="16" />
+        <Icon name="edit" :width="24" :height="24" />
         <span>编辑</span>
       </button>
       <button class="action-btn" @click="toggleFavorite" type="button">
-        <Icon :name="password.isFavorited ? 'star-filled' : 'star'" :width="16" :height="16" />
+        <Icon :name="password.isFavorited ? 'star-filled' : 'star'" :width="24" :height="24" />
         <span>{{ password.isFavorited ? '取消收藏' : '收藏' }}</span>
       </button>
       <button class="action-btn" @click="$emit('delete', password.id)" type="button">
-        <Icon name="trash" :width="16" :height="16" />
+        <Icon name="trash" :width="24" :height="24" />
         <span>删除</span>
       </button>
     </div>

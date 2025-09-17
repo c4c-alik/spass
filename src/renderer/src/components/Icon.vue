@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   name: {
@@ -20,11 +20,11 @@ const props = defineProps({
   },
   width: {
     type: [String, Number],
-    default: 24
+    default: 16
   },
   height: {
     type: [String, Number],
-    default: 24
+    default: 16
   },
   className: {
     type: String,
@@ -40,7 +40,7 @@ const svgContent = ref('')
 const innerContent = ref('')
 
 // 图标映射表
-const iconMap = {
+const iconMap: Record<string, string> = {
   'check': '/src/assets/icons/check.svg',
   'clock': '/src/assets/icons/clock.svg',
   'cog': '/src/assets/icons/cog.svg',
@@ -66,7 +66,7 @@ const iconMap = {
   'x': '/src/assets/icons/x.svg'
 }
 
-const loadIcon = async () => {
+const loadIcon = async (): Promise<void> => {
   try {
     const iconName = props.name
     if (!iconMap[iconName]) {
@@ -80,7 +80,9 @@ const loadIcon = async () => {
     // 提取SVG内容（去除svg标签本身）
     const match = svgText.match(/<svg[^>]*>([\s\S]*)<\/svg>/)
     if (match && match[1]) {
-      svgContent.value = svgText
+      // 移除原始SVG中的width和height属性，让CSS控制大小
+      let cleanedSvgContent = svgText.replace(/width="[^"]*"/, '').replace(/height="[^"]*"/, '')
+      svgContent.value = cleanedSvgContent
       innerContent.value = match[1]
     }
   } catch (error) {
@@ -98,5 +100,7 @@ watch(() => props.name, loadIcon, { immediate: true })
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  display: inline-block;
+  vertical-align: middle;
 }
 </style>
