@@ -31,11 +31,11 @@ html {
   html {
     font-size: 16px;
   }
-  
+
   .section-title h2 {
     font-size: 24px;
   }
-  
+
   .password-card {
     padding: 25px;
   }
@@ -45,19 +45,19 @@ html {
   html {
     font-size: 16px;
   }
-  
+
   .section-title h2 {
     font-size: 28px;
   }
-  
+
   .password-card {
     padding: 30px;
   }
-  
+
   .card-title h3 {
     font-size: 20px;
   }
-  
+
   .card-title p {
     font-size: 16px;
   }
@@ -67,19 +67,19 @@ html {
   html {
     font-size: 16px;
   }
-  
+
   .section-title h2 {
     font-size: 32px;
   }
-  
+
   .password-card {
     padding: 35px;
   }
-  
+
   .card-title h3 {
     font-size: 22px;
   }
-  
+
   .card-title p {
     font-size: 18px;
   }
@@ -103,7 +103,7 @@ code {
 .logo {
   margin-bottom: 20px;
   -webkit-user-drag: none;
-  height: 128px;
+  height: 30px;
   width: 128px;
   will-change: filter;
   transition: filter 300ms;

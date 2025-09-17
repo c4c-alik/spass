@@ -62,14 +62,14 @@
 
         <div class="form-group">
           <label for="category">分类</label>
-          <select 
-            id="category" 
+          <select
+            id="category"
             v-model="formData.category"
           >
             <option value="">请选择分类</option>
-            <option 
-              v-for="category in predefinedCategories" 
-              :key="category.value" 
+            <option
+              v-for="category in predefinedCategories"
+              :key="category.value"
               :value="category.value"
             >
               {{ category.label }}
@@ -167,7 +167,7 @@ export default defineComponent({
         'strong': '强'
       }
       return strengthMap[this.passwordStrength]
-    },
+    }
   },
   watch: {
     visible(newVal) {
@@ -296,12 +296,14 @@ export default defineComponent({
 
 .password-modal {
   background: white;
-  border-radius: 12px 12px 12px 0;
+  border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -310,6 +312,7 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -340,6 +343,8 @@ export default defineComponent({
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .form-group {
@@ -415,6 +420,7 @@ export default defineComponent({
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .btn {
