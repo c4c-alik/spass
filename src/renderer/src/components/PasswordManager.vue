@@ -4,7 +4,7 @@
     <div class="header">
       <div class="logo">
         <Icon name="lock" :width="24" :height="24" />
-        <span>SecurePass</span>
+        <span>SPass</span>
       </div>
       <div class="actions">
         <button class="btn" @click="syncPasswords" type="button">
