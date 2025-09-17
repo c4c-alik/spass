@@ -42,10 +42,10 @@
               required
             >
             <button class="toggle-password" @click="showPassword = !showPassword" type="button">
-              <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="20" :height="20" />
+              <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
             </button>
             <button class="generate-password" @click="generatePassword" type="button">
-              <Icon name="dice" :width="20" :height="20" />
+              <Icon name="dice" :width="24" :height="24" />
             </button>
           </div>
         </div>
@@ -62,16 +62,16 @@
 
         <div class="form-group">
           <label for="category">分类</label>
-          <select 
-            id="category" 
-            v-model="formData.category" 
+          <select
+            id="category"
+            v-model="formData.category"
             @focus="showAllOptions = true"
             @blur="showAllOptions = false"
           >
             <option value="">选择或输入分类</option>
-            <option 
-              v-for="category in (showAllOptions ? allCategories : filteredCategories)" 
-              :key="category.value" 
+            <option
+              v-for="category in (showAllOptions ? allCategories : filteredCategories)"
+              :key="category.value"
               :value="category.value"
             >
               {{ category.label }}
@@ -184,13 +184,13 @@ export default defineComponent({
       if (!this.formData.category) {
         return this.predefinedCategories
       }
-      
+
       // 查找匹配的预定义分类
-      const matchedCategories = this.predefinedCategories.filter(category => 
-        category.label.includes(this.formData.category) || 
+      const matchedCategories = this.predefinedCategories.filter(category =>
+        category.label.includes(this.formData.category) ||
         category.value.includes(this.formData.category)
       )
-      
+
       // 如果输入的不是预定义分类，则添加为新分类
       if (!this.predefinedCategories.some(c => c.value === this.formData.category)) {
         return [
@@ -198,7 +198,7 @@ export default defineComponent({
           ...matchedCategories
         ]
       }
-      
+
       return matchedCategories
     },
     // 所有分类（包括预定义和用户输入的）
@@ -307,7 +307,7 @@ export default defineComponent({
         'app': 'mobile',
         'other': 'key'
       }
-      
+
       const categoryColors = {
         'website': '#4361ee',
         'payment': '#f72585',
@@ -315,7 +315,7 @@ export default defineComponent({
         'app': '#3f37c9',
         'other': '#6c757d'
       }
-      
+
       this.formData.icon = categoryIcons[this.formData.category] || 'key'
       this.formData.color = categoryColors[this.formData.category] || '#4361ee'
     },

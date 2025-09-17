@@ -8,11 +8,11 @@
       </div>
       <div class="actions">
         <button class="btn" @click="syncPasswords" type="button">
-          <Icon name="sync" :width="16" :height="16" />
+          <Icon name="sync" :width="24" :height="24" />
           <span>同步</span>
         </button>
         <button class="btn" @click="openSettings" type="button">
-          <Icon name="cog" :width="16" :height="16" />
+          <Icon name="cog" :width="24" :height="24" />
           <span>设置</span>
         </button>
       </div>
@@ -28,7 +28,7 @@
           @input="searchPasswords"
         >
         <button type="button">
-          <Icon name="search" :width="16" :height="16" />
+          <Icon name="search" :width="24" :height="24" />
         </button>
       </div>
     </div>
@@ -42,11 +42,11 @@
           :class="{ active: activeCategory === 'all' }"
           @click="setCategory('all')"
         >
-          <Icon name="key" :width="16" :height="16" />
+          <Icon name="key" :width="24" :height="24" />
           <span>所有密码</span>
         </div>
         <div class="nav-item" @click="setCategory('favorite')">
-          <Icon name="star" :width="16" :height="16" />
+          <Icon name="star" :width="24" :height="24" />
           <span>收藏夹</span>
         </div>
 
@@ -56,7 +56,7 @@
           :class="{ active: activeCategory === 'website' }"
           @click="setCategory('website')"
         >
-          <Icon name="globe" :width="16" :height="16" />
+          <Icon name="globe" :width="24" :height="24" />
           <span>网站</span>
         </div>
         <div
@@ -64,7 +64,7 @@
           :class="{ active: activeCategory === 'payment' }"
           @click="setCategory('payment')"
         >
-          <Icon name="credit-card" :width="16" :height="16" />
+          <Icon name="credit-card" :width="24" :height="24" />
           <span>支付信息</span>
         </div>
         <div
@@ -72,7 +72,7 @@
           :class="{ active: activeCategory === 'wifi' }"
           @click="setCategory('wifi')"
         >
-          <Icon name="network" :width="16" :height="16" />
+          <Icon name="network" :width="24" :height="24" />
           <span>Wi-Fi</span>
         </div>
         <div
@@ -80,17 +80,17 @@
           :class="{ active: activeCategory === 'app' }"
           @click="setCategory('app')"
         >
-          <Icon name="mobile" :width="16" :height="16" />
+          <Icon name="mobile" :width="24" :height="24" />
           <span>应用</span>
         </div>
 
         <div class="category-title">工具</div>
         <div class="nav-item" @click="generatePassword">
-          <Icon name="plus-circle" :width="16" :height="16" />
+          <Icon name="plus-circle" :width="24" :height="24" />
           <span>生成密码</span>
         </div>
         <div class="nav-item" @click="checkSecurity">
-          <Icon name="shield" :width="16" :height="16" />
+          <Icon name="shield" :width="24" :height="24" />
           <span>安全检查</span>
         </div>
       </div>
@@ -100,7 +100,7 @@
         <div class="section-title">
           <h2>{{ listTitle }}</h2>
           <button class="add-btn" @click="showAddPasswordModal" type="button">
-            <Icon name="plus" :width="16" :height="16" />
+            <Icon name="plus" :width="24" :height="24" />
             <span>添加新密码</span>
           </button>
         </div>
@@ -121,11 +121,11 @@
     <!-- 安全状态栏 -->
     <div class="security-bar">
       <div class="security-status">
-        <Icon name="shield" :width="16" :height="16" />
+        <Icon name="shield" :width="24" :height="24" />
         <span>保险库已锁定</span>
       </div>
       <div class="lock-status">
-        <Icon name="clock" :width="16" :height="16" />
+        <Icon name="clock" :width="24" :height="24" />
         <span>自动锁定: 5分钟</span>
       </div>
     </div>
