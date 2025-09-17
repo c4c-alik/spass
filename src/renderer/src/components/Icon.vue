@@ -53,6 +53,7 @@ const iconMap: Record<string, string> = {
   'globe': '/src/assets/icons/globe.svg',
   'key': '/src/assets/icons/key.svg',
   'lock': '/src/assets/icons/lock.svg',
+  'menu': '/src/assets/icons/menu.svg',
   'mobile': '/src/assets/icons/mobile.svg',
   'network': '/src/assets/icons/network.svg',
   'plus-circle': '/src/assets/icons/plus-circle.svg',
