@@ -3,11 +3,13 @@
     <!-- 头部 -->
     <div class="header">
       <div class="logo">
-        <Icon name="lock" :width="24" :height="24" />
+        <div class="logo-icon">
+          <Icon name="lock" :width="24" :height="24" />
+        </div>
         <span>SPass</span>
       </div>
       <div class="actions">
-        <button class="btn" @click="syncPasswords" type="button">
+        <button class="btn sync-btn" @click="syncPasswords" type="button">
           <Icon name="sync" :width="24" :height="24" />
           <span>同步</span>
         </button>
@@ -342,50 +344,117 @@ body {
 
 /* 头部样式 */
 .header {
-  background: var(--primary);
-  color: white;
-  padding: 20px;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  padding: 20px 25px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(30px, -15px) rotate(3deg); }
+  66% { transform: translate(-20px, 20px) rotate(-3deg); }
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 1.5rem;
-  font-weight: 600;
+  gap: 10px;
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 2;
 }
 
-.logo i {
-  font-size: 1.8rem;
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .actions {
   display: flex;
-  gap: 15px;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
+  background: rgba(255, 255, 255, 0.15);
   color: white;
-  padding: 8px 15px;
-  border-radius: 8px;
-  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 6px 12px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  font-weight: 500;
   transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 .btn i {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
+}
+
+/* 添加一些动态效果 */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+.sync-btn {
+  animation: pulse 2s infinite;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header {
+    padding: 6px 12px;
+  }
+
+  .btn span {
+    display: none;
+  }
+
+  .btn {
+    padding: 6px;
+  }
 }
 
 /* 搜索区域 */
@@ -555,7 +624,7 @@ body {
   }
 
   .header {
-    padding: 25px;
+    padding: 20px 25px;
   }
 
   .search-area {
@@ -587,7 +656,7 @@ body {
   }
 
   .header {
-    padding: 25px 30px;
+    padding: 20px 25px;
   }
 
   .search-area {
@@ -614,7 +683,7 @@ body {
   }
 
   .header {
-    padding: 30px 40px;
+    padding: 20px 25px;
   }
 
   .search-area {
@@ -646,6 +715,18 @@ body {
 @media (max-width: 768px) {
   .password-manager {
     height: auto;
+  }
+
+  .header {
+    padding: 20px 25px;
+  }
+
+  .btn span {
+    display: none;
+  }
+
+  .btn {
+    padding: 12px;
   }
 
   .main-content {
