@@ -161,6 +161,7 @@ function isDotActive(index) {
 
 .password-field input {
   flex: 1;
+  min-width: 100px;
   border: none;
   background: transparent;
   font-family: 'Courier New', monospace;

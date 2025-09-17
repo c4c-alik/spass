@@ -678,41 +678,6 @@ body {
   }
 }
 
-@media (min-width: 1400px) {
-  .password-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 30px;
-  }
-
-  .header {
-    padding: 20px 25px;
-  }
-
-  .search-area {
-    padding: 30px 40px;
-  }
-
-  .password-list {
-    padding: 30px 40px;
-  }
-
-  .section-title h2 {
-    font-size: 28px;
-  }
-
-  .password-card {
-    padding: 30px;
-  }
-
-  .card-title h3 {
-    font-size: 20px;
-  }
-
-  .card-title p {
-    font-size: 16px;
-  }
-}
-
 /* 响应式设计 */
 @media (max-width: 768px) {
   .password-manager {
