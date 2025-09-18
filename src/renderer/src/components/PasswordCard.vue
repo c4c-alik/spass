@@ -106,7 +106,7 @@ function isDotActive(index) {
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 20px;
+  padding: 25px;
   border: 1px solid var(--border);
   transition: all 0.3s ease;
 }
