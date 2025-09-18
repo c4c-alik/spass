@@ -457,7 +457,7 @@ body {
 
 /* 搜索区域 */
 .search-area {
-  padding: 15px;
+  padding: 25px;
   background: white;
   border-bottom: 1px solid var(--border);
 }
@@ -547,7 +547,7 @@ body {
 .password-list {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 25px;
 }
 
 .section-title {
@@ -583,7 +583,7 @@ body {
 .password-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: 25px;
 }
 
 /* 安全状态栏 */
