@@ -23,6 +23,8 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "argon2": "^0.44.0",
+    "crypto-js": "^4.2.0",
     "electron-updater": "^6.3.9",
     "sqlite3": "^5.1.7"
   },

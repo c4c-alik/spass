@@ -1,5 +1,6 @@
 <template>
-  <div class="password-card" :class="{'favorited': password.isFavorited}">
+  <!-- 密码卡片组件，继承全局card样式并添加特定样式 -->
+  <div class="password-card card" :class="{'favorited': password.isFavorited}">
     <div class="card-header">
       <div class="icon-container" :style="{ background: password.color }">
         <Icon :name="password.icon" :width="24" :height="24" />
@@ -70,11 +71,13 @@ const strengthText = computed(() => {
   return strengthMap[props.password.strength]
 })
 
-function togglePasswordVisibility() {
+// 切换密码可见性
+function togglePasswordVisibility(): void {
   showPassword.value = !showPassword.value
 }
 
-function copyPassword() {
+// 复制密码
+function copyPassword(): void {
   navigator.clipboard.writeText(props.password.password)
     .then(() => {
       copyStatus.value = 'success'
@@ -87,11 +90,13 @@ function copyPassword() {
     })
 }
 
-function toggleFavorite() {
+// 切换收藏状态
+function toggleFavorite(): void {
   emit('toggle-favorite', props.password.id)
 }
 
-function isDotActive(index) {
+// 判断强度点是否激活
+function isDotActive(index: number): boolean {
   const activeDotsMap = {
     'weak': 1,
     'medium': 2,
@@ -102,19 +107,11 @@ function isDotActive(index) {
 </script>
 
 <style scoped>
+/* 继承全局card样式，只定义密码卡片特有样式 */
 .password-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   padding: 25px;
   border: 1px solid var(--border);
   transition: all 0.3s ease;
-}
-
-.password-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
-  border-color: var(--primary);
 }
 
 .card-header {

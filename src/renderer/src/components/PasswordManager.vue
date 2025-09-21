@@ -153,7 +153,7 @@ import PasswordCard from './PasswordCard.vue'
 import PasswordModal from './PasswordModal.vue'
 import Icon from './Icon.vue'
 
-// 定义接口
+// 定义密码接口
 interface Password {
   id: number
   service: string
@@ -176,7 +176,7 @@ const searchQuery = ref('')
 const activeCategory = ref('all')
 const showModal = ref(false)
 const editingPassword = ref<Password | null>(null)
-const isSidebarHidden = ref(false) // 默认显示侧边栏，只在小屏幕上通过汉堡菜单控制隐藏
+const isSidebarHidden = ref(false)
 
 // 计算属性
 const filteredPasswords = computed(() => {
@@ -216,38 +216,43 @@ const categories = [
   { id: 'app', name: '应用', icon: 'mobile' }
 ]
 
-// 生命周期
+// 生命周期钩子
 onMounted(async () => {
   await loadPasswords()
 })
 
-// 方法
+// 加载密码数据
 const loadPasswords = async (): Promise<void> => {
   try {
-    passwords.value = await window.api.password.getPasswords()
+    passwords.value = await window.api.password.getAllPasswords()
   } catch (error) {
     console.error('Failed to load passwords:', error)
   }
 }
 
+// 设置当前分类
 const setCategory = (category: string): void => {
   activeCategory.value = category
 }
 
+// 搜索密码
 const searchPasswords = (): void => {
   // 搜索逻辑已在计算属性中处理
 }
 
+// 显示添加密码模态框
 const showAddPasswordModal = (): void => {
   editingPassword.value = null
   showModal.value = true
 }
 
+// 编辑密码
 const editPassword = (password: Password): void => {
   editingPassword.value = { ...password }
   showModal.value = true
 }
 
+// 切换收藏状态
 const toggleFavorite = async (id: number): Promise<void> => {
   try {
     await window.api.password.toggleFavorite(id)
@@ -257,55 +262,61 @@ const toggleFavorite = async (id: number): Promise<void> => {
   }
 }
 
+// 关闭模态框
 const closeModal = (): void => {
   showModal.value = false
   editingPassword.value = null
 }
 
-const savePassword = async (passwordData: any): Promise<void> => {
+// 保存密码
+const savePassword = async (passwordData: Password): Promise<void> => {
   try {
     if (passwordData.id) {
-      // 更新现有密码 - 修复参数传递方式
+      // 更新现有密码
       await window.api.password.updatePassword(passwordData.id, passwordData)
     } else {
       // 新增密码
       await window.api.password.addPassword(passwordData)
     }
-    // 确保在保存后刷新密码列表
+    // 刷新密码列表
     await loadPasswords()
     closeModal()
   } catch (error) {
     console.error('Failed to save password:', error)
-    // 在实际应用中，这里应该显示错误消息给用户
   }
 }
 
+// 删除密码
 const deletePassword = async (id: number): Promise<void> => {
   try {
     await window.api.password.deletePassword(id)
     await loadPasswords()
   } catch (error) {
     console.error('Failed to delete password:', error)
-    // 在实际应用中，这里应该显示错误消息给用户
   }
 }
 
+// 同步密码
 const syncPasswords = (): void => {
   console.log('Syncing passwords...')
 }
 
+// 打开设置
 const openSettings = (): void => {
   console.log('Opening settings...')
 }
 
+// 生成密码
 const generatePassword = (): void => {
   console.log('Generating password...')
 }
 
+// 安全检查
 const checkSecurity = (): void => {
   console.log('Checking security...')
 }
 
+// 切换侧边栏显示状态
 const toggleSidebar = (): void => {
   isSidebarHidden.value = !isSidebarHidden.value
 }
@@ -337,7 +348,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
 }
 
 .password-manager {
@@ -376,9 +386,15 @@ body {
 }
 
 @keyframes float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(30px, -15px) rotate(3deg); }
-  66% { transform: translate(-20px, 20px) rotate(-3deg); }
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(30px, -15px) rotate(3deg);
+  }
+  66% {
+    transform: translate(-20px, 20px) rotate(-3deg);
+  }
 }
 
 .logo {
@@ -446,9 +462,15 @@ body {
 
 /* 添加一些动态效果 */
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
 }
 
 .sync-btn {
