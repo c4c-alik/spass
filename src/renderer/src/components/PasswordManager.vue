@@ -558,7 +558,7 @@ body {
 }
 
 .section-title h2 {
-  font-size: 1.4rem;
+  font-size: 24px;
   font-weight: 600;
 }
 
@@ -638,7 +638,7 @@ body {
   }
 
   .section-title h2 {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .password-card {
@@ -662,11 +662,11 @@ body {
   }
 
   .search-area {
-    padding: 25px 30px;
+    padding: 25px;
   }
 
   .password-list {
-    padding: 25px 30px;
+    padding: 25px;
   }
 
   .section-title h2 {
