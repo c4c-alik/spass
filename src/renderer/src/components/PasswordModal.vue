@@ -1,6 +1,6 @@
 <template>
   <div class="modal-overlay" v-if="visible" @click.self="closeModal">
-    <div class="password-modal">
+    <div class="password-modal card">
       <div class="modal-header">
         <h2>{{ isEditing ? '编辑密码' : '添加新密码' }}</h2>
         <button class="close-btn" @click="closeModal" type="button">
@@ -347,47 +347,6 @@ export default defineComponent({
   flex: 1;
 }
 
-.form-group {
-  margin-bottom: 1.2rem;
-  position: relative;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-weight: 500;
-  color: #555;
-  font-size: 0.8rem;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
-}
-
-/* 可编辑下拉框样式 */
-.form-group select {
-  appearance: none;
-  padding-right: 2.5rem;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1rem;
-}
 
 .password-input-group {
   display: flex;
@@ -398,57 +357,12 @@ export default defineComponent({
   flex: 1;
 }
 
-.password-input-group button {
-  background: #f0f0f0;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 0 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.password-input-group button:hover {
-  background: #e0e0e0;
-}
 
 .modal-footer {
-  padding: 1.5rem;
-  border-top: 1px solid #eee;
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   flex-shrink: 0;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.2s;
-  font-weight: 500;
-}
-
-.btn-secondary {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.btn-secondary:hover {
-  background: #e0e0e0;
-}
-
-.btn-primary {
-  background: #4361ee;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #3a56e0;
 }
 
 .password-strength {
