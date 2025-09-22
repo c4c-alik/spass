@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "argon2": "^0.20.0",
-    "sqlite3": "5.1.7"
-  }
-}
