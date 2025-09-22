@@ -292,3 +292,20 @@ ipcMain.handle('decrypt-password', async (_event, encryptedPassword) => {
     throw new Error('Failed to decrypt password')
   }
 })
+
+// 切换收藏状态
+ipcMain.handle('toggle-favorite', async (_event, id) => {
+  // 重置自动锁定定时器
+  setupAutoLock()
+
+  if (!encryptionManager.isUnlocked()) {
+    throw new Error('Application is locked')
+  }
+
+  const result = await memoryDb.toggleFavorite(id)
+
+  // 保存到加密文件
+  await saveMemoryDbToEncryptedFile()
+
+  return result
+})

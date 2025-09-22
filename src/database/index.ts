@@ -12,6 +12,7 @@ export interface PasswordEntry {
   category?: string
   notes?: string
   strength?: 'weak' | 'medium' | 'strong'
+  isFavorited?: boolean
   createdAt?: string
   updatedAt?: string
 }

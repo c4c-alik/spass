@@ -9,6 +9,7 @@ interface PasswordAPI {
   deletePassword: (id: number) => Promise<number>
   searchPasswords: (query: string) => Promise<PasswordEntry[]>
   decryptPassword: (encryptedPassword: string) => Promise<string>
+  toggleFavorite: (id: number) => Promise<void>
 }
 
 // 定义 UserAPI 接口
@@ -39,7 +40,8 @@ contextBridge.exposeInMainWorld('api', {
     updatePassword: (id: number, password: PasswordEntry): Promise<number> => ipcRenderer.invoke('update-password', { id, passwordData: password }),
     deletePassword: (id: number): Promise<number> => ipcRenderer.invoke('delete-password', id),
     searchPasswords: (query: string): Promise<PasswordEntry[]> => ipcRenderer.invoke('search-passwords', query),
-    decryptPassword: (encryptedPassword: string): Promise<string> => ipcRenderer.invoke('decrypt-password', encryptedPassword)
+    decryptPassword: (encryptedPassword: string): Promise<string> => ipcRenderer.invoke('decrypt-password', encryptedPassword),
+    toggleFavorite: (id: number): Promise<void> => ipcRenderer.invoke('toggle-favorite', id)
   },
   user: {
     registerUser: (username: string, password: string): Promise<number | undefined> => ipcRenderer.invoke('register-user', username, password),
