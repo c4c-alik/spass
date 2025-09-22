@@ -129,8 +129,8 @@ export default defineComponent({
         url: '',
         category: ''
       },
-      showPassword: false,
-      predefinedCategories: [ // 预定义的分类
+      showPassword: false, // 控制密码可见性状态
+      predefinedCategories: [
         { value: 'website', label: '网站' },
         { value: 'payment', label: '支付信息' },
         { value: 'wifi', label: 'Wi-Fi' },
@@ -170,25 +170,43 @@ export default defineComponent({
     }
   },
   watch: {
-    visible(newVal) {
-      if (newVal) {
-        if (this.isEditing && this.password) {
-          // 编辑模式：填充表单数据
-          this.formData = {
-            title: this.password.service || '',
-            username: this.password.username || '',
-            password: this.password.password || '',
-            url: this.password.url || '',
-            category: this.password.category || ''
+    visible: {
+      async handler(newVal) {
+        if (newVal) {
+          // 每次打开表单时，将密码可见性设置为隐藏状态（默认关闭）
+          this.showPassword = false
+          
+          if (this.isEditing && this.password) {
+            // 编辑模式：填充表单数据
+            let password = this.password.password || ''
+            
+            // 如果是加密密码，则解密
+            if (password && password.startsWith('{')) {
+              try {
+                password = await window.api.password.decryptPassword(this.password.password)
+              } catch (error) {
+                console.error('解密密码失败:', error)
+                password = '解密失败'
+              }
+            }
+            
+            this.formData = {
+              title: this.password.service || '',
+              username: this.password.username || '',
+              password: password,
+              url: this.password.url || '',
+              category: this.password.category || ''
+            }
+          } else {
+            // 添加模式：重置表单
+            this.resetForm()
           }
         } else {
-          // 添加模式：重置表单
-          this.resetForm()
+          // 模态框关闭时重置状态
+          this.showAllOptions = false
         }
-      } else {
-        // 模态框关闭时重置状态
-        this.showAllOptions = false
-      }
+      },
+      immediate: true
     }
   },
   methods: {
@@ -347,6 +365,33 @@ export default defineComponent({
   flex: 1;
 }
 
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
 
 .password-input-group {
   display: flex;
@@ -357,12 +402,59 @@ export default defineComponent({
   flex: 1;
 }
 
+.password-input-group button {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.password-input-group button:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
   flex-shrink: 0;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary {
+  background: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #e9ecef;
+}
+
+.btn-primary {
+  background: #4361ee;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #3a56d4;
 }
 
 .password-strength {
@@ -398,76 +490,5 @@ export default defineComponent({
 
 .strength-weak .dot:nth-child(1).active {
   background: #f72585;
-}
-
-.strength-medium .dot:nth-child(1).active,
-.strength-medium .dot:nth-child(2).active {
-  background: #f7b924;
-}
-
-.strength-strong .dot.active {
-  background: #4cc9f0;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .modal-overlay {
-    padding: 0.5rem;
-    align-items: stretch;
-  }
-  
-  .password-modal {
-    max-height: 100vh;
-    border-radius: 0;
-  }
-  
-  .modal-header {
-    padding: 1rem;
-  }
-  
-  .modal-body {
-    padding: 1rem;
-  }
-  
-  .modal-footer {
-    padding: 1rem;
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-    padding: 0.75rem;
-    font-size: 0.9rem;
-  }
-  
-  .password-input-group {
-    flex-direction: column;
-  }
-  
-  .password-input-group button {
-    padding: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .form-group label {
-    font-size: 0.875rem;
-  }
-  
-  .form-group input,
-  .form-group select {
-    font-size: 0.875rem;
-    padding: 0.625rem;
-  }
-  
-  .password-strength {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
 }
 </style>

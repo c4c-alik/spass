@@ -53,26 +53,26 @@ export class EncryptionManager {
       timeCost: 3,
       memoryCost: 2 ** 16,
       parallelism: 1
-    });
-    
+    })
+
     // 从PHC格式的hash中提取实际的哈希值部分
-    const parts = key.split('$');
-    const hashBuffer = Buffer.from(parts[4], 'base64');
+    const parts = key.split('$')
+    const hashBuffer = Buffer.from(parts[4], 'base64')
     // 确保返回的密钥长度正确
-    const derivedKey = hashBuffer.slice(0, ENCRYPTION_CONFIG.keyLength);
-    
+    const derivedKey = hashBuffer.slice(0, ENCRYPTION_CONFIG.keyLength)
+
     // 确保密钥长度正确（32字节用于AES-256）
     // 如果派生的密钥长度不足，用0填充到所需长度
     if (derivedKey.length < ENCRYPTION_CONFIG.keyLength) {
-      const padding = Buffer.alloc(ENCRYPTION_CONFIG.keyLength - derivedKey.length, 0);
-      return Buffer.concat([derivedKey, padding]);
+      const padding = Buffer.alloc(ENCRYPTION_CONFIG.keyLength - derivedKey.length, 0)
+      return Buffer.concat([derivedKey, padding])
     }
-    
+
     if (derivedKey.length > ENCRYPTION_CONFIG.keyLength) {
-      return derivedKey.slice(0, ENCRYPTION_CONFIG.keyLength);
+      return derivedKey.slice(0, ENCRYPTION_CONFIG.keyLength)
     }
-    
-    return derivedKey;
+
+    return derivedKey
   }
 
   /**
@@ -107,7 +107,7 @@ export class EncryptionManager {
    * @param plaintext 明文密码
    * @returns 加密后的密码和元数据
    */
-  encryptPassword(plaintext: string): { encrypted: string, iv: string, authTag: string } {
+  encryptPassword(plaintext: string): { encrypted: string; iv: string; authTag: string } {
     if (!this.masterKey) {
       throw new Error('Master key not set')
     }
@@ -130,7 +130,7 @@ export class EncryptionManager {
    * @param encryptedData 加密的数据对象
    * @returns 解密后的明文密码
    */
-  decryptPassword(encryptedData: { encrypted: string, iv: string, authTag: string }): string {
+  decryptPassword(encryptedData: { encrypted: string; iv: string; authTag: string }): string {
     if (!this.masterKey) {
       throw new Error('Master key not set')
     }
@@ -139,10 +139,10 @@ export class EncryptionManager {
     const authTag = Buffer.from(encryptedData.authTag, 'hex')
     const decipher = crypto.createDecipheriv(ENCRYPTION_CONFIG.algorithm, this.masterKey, iv)
     decipher.setAuthTag(authTag)
-    
+
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
-    
+
     return decrypted
   }
 
@@ -176,12 +176,17 @@ export class EncryptionManager {
     }
 
     const iv = encryptedData.subarray(0, ENCRYPTION_CONFIG.ivLength)
-    const authTag = encryptedData.subarray(ENCRYPTION_CONFIG.ivLength, ENCRYPTION_CONFIG.ivLength + ENCRYPTION_CONFIG.authTagLength)
-    const data = encryptedData.subarray(ENCRYPTION_CONFIG.ivLength + ENCRYPTION_CONFIG.authTagLength)
+    const authTag = encryptedData.subarray(
+      ENCRYPTION_CONFIG.ivLength,
+      ENCRYPTION_CONFIG.ivLength + ENCRYPTION_CONFIG.authTagLength
+    )
+    const data = encryptedData.subarray(
+      ENCRYPTION_CONFIG.ivLength + ENCRYPTION_CONFIG.authTagLength
+    )
 
     const decipher = crypto.createDecipheriv(ENCRYPTION_CONFIG.algorithm, this.masterKey, iv)
     decipher.setAuthTag(authTag)
-    
+
     return Buffer.concat([decipher.update(data), decipher.final()])
   }
 
