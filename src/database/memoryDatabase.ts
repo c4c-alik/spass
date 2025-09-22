@@ -6,12 +6,6 @@ import { promisify } from 'util'
 // 导入 PasswordEntry 类型
 import { PasswordEntry } from './index'
 
-// 定义数据库操作结果类型
-interface DatabaseRunResult {
-  lastID?: number
-  changes?: number
-}
-
 export class MemoryDatabase {
   private db: Database.Database | null = null
   private dbPath: string
@@ -98,63 +92,111 @@ export class MemoryDatabase {
       throw new Error('Database not initialized')
     }
 
+    console.log('Exporting memory database to buffer using alternative method')
+    
     // 创建临时文件路径
     const tempPath = path.join(app.getPath('temp'), `temp_export_db_${Date.now()}_${Math.random().toString(36).substring(2, 10)}.sqlite`)
+    console.log('Exporting to temporary file:', tempPath)
 
-    // 备份内存数据库到临时文件
-    return new Promise((resolve, reject) => {
-      this.db!.backup(tempPath, async (err) => {
-        if (err) {
-          reject(err)
-          return
-        }
-
-        try {
-          // 使用动态导入以避免在模块加载时出现问题
-          const fs = await import('fs/promises')
-
-          // 读取临时文件内容
-          const buffer = await fs.readFile(tempPath)
-          console.log('buffer', buffer)
-
-          // 尝试删除临时文件，即使失败也不会影响主流程
-          try {
-            await fs.unlink(tempPath)
-          } catch (unlinkErr) {
-            // 如果删除失败，记录警告但不中断流程
-            console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
-
-            // 尝试在应用退出时清理
-            const cleanupHandler = async (): Promise<void> => {
-              try {
-                // 检查文件是否存在
-                try {
-                  await fs.access(tempPath)
-                } catch {
-                  // 文件不存在，无需清理
-                  app.removeListener('before-quit', cleanupHandler)
-                  return
-                }
-
-                // 文件存在，尝试删除
-                await fs.unlink(tempPath)
-                console.log(`Successfully cleaned up temporary database file on app exit: ${tempPath}`)
-                app.removeListener('before-quit', cleanupHandler)
-              } catch (finalUnlinkErr) {
-                // 最终清理也失败，记录日志
-                console.warn(`Failed to delete temporary database file on app exit: ${tempPath}`, finalUnlinkErr)
-              }
-            }
-
-            app.on('before-quit', cleanupHandler)
-          }
-
-          resolve(buffer)
-        } catch (readErr) {
-          reject(readErr)
-        }
+    try {
+      // 创建一个新的磁盘数据库
+      const diskDb = new Database.Database(tempPath)
+      
+      // 等待数据库连接完成
+      await new Promise<void>((resolve, reject) => {
+        diskDb.on('open', () => resolve())
+        diskDb.on('error', reject)
       })
-    })
+
+      // 在磁盘数据库中创建表结构
+      const diskExec = promisify(diskDb.exec.bind(diskDb))
+      await diskExec(`
+        CREATE TABLE IF NOT EXISTS passwords (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          service TEXT NOT NULL,
+          username TEXT NOT NULL,
+          password TEXT NOT NULL,
+          url TEXT,
+          category TEXT DEFAULT 'other',
+          notes TEXT,
+          strength TEXT DEFAULT 'medium',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+      
+      // 从内存数据库中获取所有密码数据
+      const all = promisify(this.db.all.bind(this.db))
+      const passwords = await all('SELECT * FROM passwords')
+      console.log('Found', passwords.length, 'passwords to export')
+      
+      // 如果有数据，则逐条插入到磁盘数据库
+      if (passwords.length > 0) {
+        const diskRun = promisify(diskDb.run.bind(diskDb))
+        
+        // 开始事务以提高性能
+        await diskRun('BEGIN TRANSACTION')
+        
+        try {
+          // 逐条插入数据
+          for (const password of passwords) {
+            await diskRun(`
+              INSERT INTO passwords (id, service, username, password, url, category, notes, strength, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              password.id,
+              password.service,
+              password.username,
+              password.password,
+              password.url,
+              password.category,
+              password.notes,
+              password.strength,
+              password.created_at,
+              password.updated_at
+            ])
+          }
+          
+          // 提交事务
+          await diskRun('COMMIT')
+          console.log('Successfully inserted all passwords into disk database')
+        } catch (error) {
+          // 回滚事务
+          await diskRun('ROLLBACK')
+          throw error
+        }
+      }
+      
+      // 关闭磁盘数据库连接
+      const diskClose = promisify(diskDb.close.bind(diskDb))
+      await diskClose()
+      
+      // 读取临时文件内容并返回Buffer
+      const fs = await import('fs/promises')
+      const buffer = await fs.readFile(tempPath)
+      console.log('Read temporary file, size:', buffer.length, 'bytes')
+      
+      // 删除临时文件
+      try {
+        await fs.unlink(tempPath)
+        console.log('Successfully deleted temporary file:', tempPath)
+      } catch (unlinkErr) {
+        console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
+      }
+      
+      return buffer
+    } catch (error) {
+      // 确保在出错时也尝试删除临时文件
+      try {
+        const fs = await import('fs/promises')
+        await fs.unlink(tempPath)
+      } catch (unlinkErr) {
+        console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
+      }
+      
+      console.error('Failed to export database using alternative method:', error)
+      throw error
+    }
   }
 
   // 获取所有密码
@@ -219,30 +261,39 @@ export class MemoryDatabase {
       throw new Error('Password ID is required for update')
     }
 
-    const run = promisify(this.db.run.bind(this.db))
-    const result: DatabaseRunResult = await run(
-      `UPDATE passwords SET
-        service = ?,
-        username = ?,
-        password = ?,
-        url = ?,
-        category = ?,
-        notes = ?,
-        strength = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?`,
-      [
-        password.service,
-        password.username,
-        password.password,
-        password.url || null,
-        password.category || 'other',
-        password.notes || null,
-        password.strength || 'medium',
-        id
-      ]
-    )
-    return result.changes || 0
+    return new Promise((resolve, reject) => {
+      // 不使用 promisify，直接使用回调函数以确保能正确访问 this.changes
+      this.db!.run(
+        `UPDATE passwords SET
+          service = ?,
+          username = ?,
+          password = ?,
+          url = ?,
+          category = ?,
+          notes = ?,
+          strength = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [
+          password.service,
+          password.username,
+          password.password,
+          password.url || null,
+          password.category || 'other',
+          password.notes || null,
+          password.strength || 'medium',
+          id
+        ],
+        function (err) {
+          if (err) {
+            reject(err)
+          } else {
+            // this.changes 只在使用 function 关键字定义的回调函数中可用
+            resolve(this.changes || 0)
+          }
+        }
+      )
+    })
   }
 
   // 删除密码
@@ -255,12 +306,21 @@ export class MemoryDatabase {
       throw new Error('Password ID is required for deletion')
     }
 
-    const run = promisify(this.db.run.bind(this.db))
-    const result: DatabaseRunResult = await run(
-      'DELETE FROM passwords WHERE id = ?',
-      [id]
-    )
-    return result.changes || 0
+    return new Promise((resolve, reject) => {
+      // 不使用 promisify，直接使用回调函数以确保能正确访问 this.changes
+      this.db!.run(
+        'DELETE FROM passwords WHERE id = ?',
+        [id],
+        function (err) {
+          if (err) {
+            reject(err)
+          } else {
+            // this.changes 只在使用 function 关键字定义的回调函数中可用
+            resolve(this.changes || 0)
+          }
+        }
+      )
+    })
   }
 
   // 按服务搜索密码
@@ -300,5 +360,3 @@ export class MemoryDatabase {
     }
   }
 }
-
-export default MemoryDatabase
