@@ -4,7 +4,7 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import UserDatabase from '../database/userDatabase'
 import { encryptionManager } from '../utils/encryption'
-import MemoryDatabase from '../database/memoryDatabase'
+import { MemoryDatabase } from '../database/memoryDatabase'
 
 let userDb: UserDatabase
 let memoryDb: MemoryDatabase
