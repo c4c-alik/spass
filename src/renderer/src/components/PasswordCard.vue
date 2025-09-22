@@ -1,6 +1,6 @@
 <template>
   <!-- 密码卡片组件，继承全局card样式并添加特定样式 -->
-  <div class="password-card card" :class="{'favorited': password.isFavorited}">
+  <div class="password-card card" :class="{ favorited: password.isFavorited }">
     <div class="card-header">
       <div class="icon-container" :style="{ background: password.color }">
         <Icon :name="password.icon" :width="24" :height="24" />
@@ -12,11 +12,11 @@
     </div>
 
     <div class="password-field">
-      <input :type="showPassword ? 'text' : 'password'" :value="showPassword ? password.password : '••••••••'" readonly>
-      <button class="toggle-password" @click="togglePasswordVisibility" type="button">
+      <input :type="showPassword ? 'text' : 'password'" :value="displayPassword" readonly />
+      <button class="toggle-password" type="button" @click="togglePasswordVisibility">
         <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
       </button>
-      <button class="copy-password" @click="copyPassword" type="button">
+      <button class="copy-password" type="button" @click="copyPassword">
         <Icon :name="copyStatus === 'success' ? 'check' : 'copy'" :width="24" :height="24" />
       </button>
     </div>
@@ -30,15 +30,15 @@
     </div>
 
     <div class="card-actions">
-      <button class="action-btn" @click="$emit('edit', password)" type="button">
+      <button class="action-btn" type="button" @click="$emit('edit', password)">
         <Icon name="edit" :width="24" :height="24" />
         <span>编辑</span>
       </button>
-      <button class="action-btn" @click="toggleFavorite" type="button">
+      <button class="action-btn" type="button" @click="toggleFavorite">
         <Icon :name="password.isFavorited ? 'star-filled' : 'star'" :width="24" :height="24" />
         <span>{{ password.isFavorited ? '取消收藏' : '收藏' }}</span>
       </button>
-      <button class="action-btn" @click="$emit('delete', password.id)" type="button">
+      <button class="action-btn" type="button" @click="$emit('delete', password.id)">
         <Icon name="trash" :width="24" :height="24" />
         <span>删除</span>
       </button>
@@ -50,6 +50,7 @@
 import { ref, computed } from 'vue'
 import Icon from './Icon.vue'
 
+// 定义组件属性
 const props = defineProps({
   password: {
     type: Object,
@@ -57,50 +58,90 @@ const props = defineProps({
   }
 })
 
+// 定义事件发射器
 const emit = defineEmits(['edit', 'delete', 'toggle-favorite'])
 
-const showPassword = ref(false)
-const copyStatus = ref('idle') // 'idle', 'copying', 'success'
+// 响应式数据
+const showPassword = ref(false) // 控制密码可见性
+const copyStatus = ref('idle') // 复制状态：'idle' | 'copying' | 'success'
+const decryptedPassword = ref('') // 解密后的密码
 
+// 计算显示的密码（明文或密文）
+const displayPassword = computed(() => {
+  if (showPassword.value) {
+    return decryptedPassword.value || '••••••••'
+  } else {
+    return '••••••••'
+  }
+})
+
+// 计算密码强度文本
 const strengthText = computed(() => {
   const strengthMap = {
-    'weak': '弱',
-    'medium': '中',
-    'strong': '强'
+    weak: '弱',
+    medium: '中',
+    strong: '强'
   }
   return strengthMap[props.password.strength]
 })
 
-// 切换密码可见性
-function togglePasswordVisibility(): void {
+/**
+ * 切换密码可见性
+ * 当用户点击眼睛图标时，如果需要显示明文且尚未解密，则进行解密
+ */
+async function togglePasswordVisibility(): void {
   showPassword.value = !showPassword.value
+
+  // 如果需要显示明文且尚未解密，则进行解密
+  if (showPassword.value && !decryptedPassword.value) {
+    try {
+      decryptedPassword.value = await window.api.password.decryptPassword(props.password.password)
+    } catch (error) {
+      console.error('解密密码失败:', error)
+      decryptedPassword.value = '解密失败'
+    }
+  }
 }
 
-// 复制密码
-function copyPassword(): void {
-  navigator.clipboard.writeText(props.password.password)
-    .then(() => {
+/**
+ * 复制密码到剪贴板
+ * 如果尚未解密，先解密再复制
+ */
+async function copyPassword(): void {
+  try {
+    // 如果尚未解密，先解密
+    if (!decryptedPassword.value) {
+      decryptedPassword.value = await window.api.password.decryptPassword(props.password.password)
+    }
+
+    navigator.clipboard.writeText(decryptedPassword.value).then(() => {
       copyStatus.value = 'success'
       setTimeout(() => {
         copyStatus.value = 'idle'
       }, 2000)
     })
-    .catch(err => {
-      console.error('复制失败:', err)
-    })
+  } catch (error) {
+    console.error('复制失败:', error)
+  }
 }
 
-// 切换收藏状态
+/**
+ * 切换收藏状态
+ */
 function toggleFavorite(): void {
   emit('toggle-favorite', props.password.id)
 }
 
-// 判断强度点是否激活
+/**
+ * 判断强度点是否激活
+ * @param index 点的索引
+ * @returns 是否激活
+ */
 function isDotActive(index: number): boolean {
   const activeDotsMap = {
-    'weak': 1,
-    'medium': 2,
-    'strong': 4
+    weak: 1,
+    medium: 2,
+    strong: 4
   }
   return index <= activeDotsMap[props.password.strength]
 }
