@@ -15,7 +15,11 @@ export class MemoryDatabase {
     this.dbPath = ':memory:'
   }
 
-  // 初始化内存数据库
+  /**
+   * 初始化内存数据库
+   * 创建内存数据库实例并初始化密码表
+   * @returns Promise<void>
+   */
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db = new Database.Database(this.dbPath, (err) => {
@@ -48,7 +52,12 @@ export class MemoryDatabase {
     })
   }
 
-  // 从文件数据库加载数据到内存数据库
+  /**
+   * 从Buffer加载数据到内存数据库
+   * 将Buffer写入临时文件，然后附加该数据库并复制数据到内存数据库
+   * @param buffer 包含数据库内容的Buffer
+   * @returns Promise<void>
+   */
   async loadFromBuffer(buffer: Buffer): Promise<void> {
     if (!this.db) {
       await this.init()
@@ -86,7 +95,11 @@ export class MemoryDatabase {
     })
   }
 
-  // 将内存数据库导出为Buffer
+  /**
+   * 将内存数据库导出为Buffer
+   * 使用替代方案：手动创建临时数据库并复制数据，避免使用可能不稳定的backup()方法
+   * @returns 包含数据库内容的Buffer
+   */
   async exportToBuffer(): Promise<Buffer> {
     if (!this.db) {
       throw new Error('Database not initialized')
@@ -109,63 +122,10 @@ export class MemoryDatabase {
       })
 
       // 在磁盘数据库中创建表结构
-      const diskExec = promisify(diskDb.exec.bind(diskDb))
-      await diskExec(`
-        CREATE TABLE IF NOT EXISTS passwords (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          service TEXT NOT NULL,
-          username TEXT NOT NULL,
-          password TEXT NOT NULL,
-          url TEXT,
-          category TEXT DEFAULT 'other',
-          notes TEXT,
-          strength TEXT DEFAULT 'medium',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
+      await this.createDatabaseSchema(diskDb)
       
-      // 从内存数据库中获取所有密码数据
-      const all = promisify(this.db.all.bind(this.db))
-      const passwords = await all('SELECT * FROM passwords')
-      console.log('Found', passwords.length, 'passwords to export')
-      
-      // 如果有数据，则逐条插入到磁盘数据库
-      if (passwords.length > 0) {
-        const diskRun = promisify(diskDb.run.bind(diskDb))
-        
-        // 开始事务以提高性能
-        await diskRun('BEGIN TRANSACTION')
-        
-        try {
-          // 逐条插入数据
-          for (const password of passwords) {
-            await diskRun(`
-              INSERT INTO passwords (id, service, username, password, url, category, notes, strength, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-              password.id,
-              password.service,
-              password.username,
-              password.password,
-              password.url,
-              password.category,
-              password.notes,
-              password.strength,
-              password.created_at,
-              password.updated_at
-            ])
-          }
-          
-          // 提交事务
-          await diskRun('COMMIT')
-          console.log('Successfully inserted all passwords into disk database')
-        } catch (error) {
-          // 回滚事务
-          await diskRun('ROLLBACK')
-          throw error
-        }
-      }
+      // 从内存数据库中获取所有密码数据并复制到磁盘数据库
+      await this.copyPasswordsToDiskDatabase(diskDb)
       
       // 关闭磁盘数据库连接
       const diskClose = promisify(diskDb.close.bind(diskDb))
@@ -177,29 +137,107 @@ export class MemoryDatabase {
       console.log('Read temporary file, size:', buffer.length, 'bytes')
       
       // 删除临时文件
-      try {
-        await fs.unlink(tempPath)
-        console.log('Successfully deleted temporary file:', tempPath)
-      } catch (unlinkErr) {
-        console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
-      }
+      await this.deleteTemporaryFile(tempPath)
       
       return buffer
     } catch (error) {
       // 确保在出错时也尝试删除临时文件
-      try {
-        const fs = await import('fs/promises')
-        await fs.unlink(tempPath)
-      } catch (unlinkErr) {
-        console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
-      }
+      await this.deleteTemporaryFile(tempPath)
       
       console.error('Failed to export database using alternative method:', error)
       throw error
     }
   }
 
-  // 获取所有密码
+  /**
+   * 在磁盘数据库中创建与内存数据库相同的表结构
+   * @param diskDb 磁盘数据库实例
+   */
+  private async createDatabaseSchema(diskDb: Database.Database): Promise<void> {
+    const diskExec = promisify(diskDb.exec.bind(diskDb))
+    await diskExec(`
+      CREATE TABLE IF NOT EXISTS passwords (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service TEXT NOT NULL,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        url TEXT,
+        category TEXT DEFAULT 'other',
+        notes TEXT,
+        strength TEXT DEFAULT 'medium',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+  }
+
+  /**
+   * 将内存数据库中的密码数据复制到磁盘数据库
+   * 使用事务处理以提高性能
+   * @param diskDb 磁盘数据库实例
+   */
+  private async copyPasswordsToDiskDatabase(diskDb: Database.Database): Promise<void> {
+    // 从内存数据库中获取所有密码数据
+    const all = promisify(this.db!.all.bind(this.db!))
+    const passwords = await all('SELECT * FROM passwords')
+    console.log('Found', passwords.length, 'passwords to export')
+    
+    // 如果有数据，则逐条插入到磁盘数据库
+    if (passwords.length > 0) {
+      const diskRun = promisify(diskDb.run.bind(diskDb))
+      
+      // 开始事务以提高性能
+      await diskRun('BEGIN TRANSACTION')
+      
+      try {
+        // 逐条插入数据
+        for (const password of passwords) {
+          await diskRun(`
+            INSERT INTO passwords (id, service, username, password, url, category, notes, strength, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            password.id,
+            password.service,
+            password.username,
+            password.password,
+            password.url,
+            password.category,
+            password.notes,
+            password.strength,
+            password.created_at,
+            password.updated_at
+          ])
+        }
+        
+        // 提交事务
+        await diskRun('COMMIT')
+        console.log('Successfully inserted all passwords into disk database')
+      } catch (error) {
+        // 回滚事务
+        await diskRun('ROLLBACK')
+        throw error
+      }
+    }
+  }
+
+  /**
+   * 删除临时数据库文件
+   * @param tempPath 临时文件路径
+   */
+  private async deleteTemporaryFile(tempPath: string): Promise<void> {
+    try {
+      const fs = await import('fs/promises')
+      await fs.unlink(tempPath)
+      console.log('Successfully deleted temporary file:', tempPath)
+    } catch (unlinkErr) {
+      console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
+    }
+  }
+
+  /**
+   * 获取所有密码记录
+   * @returns 所有密码记录的数组
+   */
   async getAllPasswords(): Promise<PasswordEntry[]> {
     if (!this.db) {
       throw new Error('Database not initialized')
@@ -219,7 +257,12 @@ export class MemoryDatabase {
     }
   }
 
-  // 添加密码
+  /**
+   * 添加新密码
+   * 注意：不使用 promisify 包装 SQLite 的 run 方法，因为会丢失 this.lastID 上下文
+   * @param password 要添加的密码数据
+   * @returns 新添加记录的ID
+   */
   async addPassword(password: PasswordEntry): Promise<number | undefined> {
     if (!this.db) {
       throw new Error('Database not initialized')
@@ -251,7 +294,13 @@ export class MemoryDatabase {
     })
   }
 
-  // 更新密码
+  /**
+   * 更新密码记录
+   * 注意：不使用 promisify 包装 SQLite 的 run 方法，因为会丢失 this.changes 上下文
+   * @param id 密码记录ID
+   * @param password 要更新的密码数据
+   * @returns 受影响的行数
+   */
   async updatePassword(id: number, password: PasswordEntry): Promise<number> {
     if (!this.db) {
       throw new Error('Database not initialized')
@@ -296,7 +345,12 @@ export class MemoryDatabase {
     })
   }
 
-  // 删除密码
+  /**
+   * 删除密码记录
+   * 注意：不使用 promisify 包装 SQLite 的 run 方法，因为会丢失 this.changes 上下文
+   * @param id 要删除的密码记录ID
+   * @returns 受影响的行数
+   */
   async deletePassword(id: number): Promise<number> {
     if (!this.db) {
       throw new Error('Database not initialized')
@@ -323,7 +377,11 @@ export class MemoryDatabase {
     })
   }
 
-  // 按服务搜索密码
+  /**
+   * 按服务、用户名或URL搜索密码
+   * @param query 搜索关键词
+   * @returns 匹配的密码记录数组
+   */
   async searchPasswords(query: string): Promise<PasswordEntry[]> {
     if (!this.db) {
       throw new Error('Database not initialized')
@@ -344,7 +402,10 @@ export class MemoryDatabase {
     `, [`%${query}%`, `%${query}%`, `%${query}%`]) as PasswordEntry[]
   }
 
-  // 关闭数据库连接
+  /**
+   * 关闭数据库连接
+   * @returns Promise<void>
+   */
   async close(): Promise<void> {
     if (this.db) {
       return new Promise((resolve, reject) => {
