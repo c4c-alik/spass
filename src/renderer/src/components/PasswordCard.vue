@@ -6,7 +6,28 @@
         <Icon :name="password.icon" :width="24" :height="24" />
       </div>
       <div class="card-title">
-        <h3>{{ password.title }}</h3>
+        <div class="title-row">
+          <h3>{{ password.service }}</h3>
+          <!-- 将分类和链接图标移到标题旁边 -->
+          <div class="title-icons">
+            <Icon
+              v-if="password.url"
+              name="link"
+              :width="24"
+              :height="24"
+              class="title-icon link-icon"
+              @click.stop="openLink(password.url)"
+            />
+            <Icon
+              v-if="password.category"
+              :name="getCategoryIcon(password.category)"
+              :width="24"
+              :height="24"
+              class="title-icon"
+              :title="getCategoryName(password.category)"
+            />
+          </div>
+        </div>
         <p>{{ password.username }}</p>
       </div>
     </div>
@@ -61,6 +82,24 @@ const props = defineProps({
 // 定义事件发射器
 const emit = defineEmits(['edit', 'delete', 'toggle-favorite'])
 
+// 分类映射
+const categoryMap = {
+  website: '网站',
+  payment: '支付信息',
+  wifi: 'Wi-Fi',
+  app: '应用',
+  other: '其他'
+}
+
+// 分类图标映射
+const categoryIcons = {
+  website: 'globe',
+  payment: 'credit-card',
+  wifi: 'wifi',
+  app: 'mobile',
+  other: 'folder'
+}
+
 // 响应式数据
 const showPassword = ref(false) // 控制密码可见性
 const copyStatus = ref('idle') // 复制状态：'idle' | 'copying' | 'success'
@@ -84,6 +123,34 @@ const strengthText = computed(() => {
   }
   return strengthMap[props.password.strength]
 })
+
+/**
+ * 获取分类名称
+ * @param category 分类ID
+ * @returns 分类名称
+ */
+function getCategoryName(category: string): string {
+  return categoryMap[category] || category
+}
+
+/**
+ * 获取分类图标
+ * @param category 分类ID
+ * @returns 分类图标名称
+ */
+function getCategoryIcon(category: string): string {
+  return categoryIcons[category] || 'folder'
+}
+
+/**
+ * 打开链接
+ * @param url 链接URL
+ */
+function openLink(url: string): void {
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
 
 /**
  * 切换密码可见性
@@ -178,14 +245,64 @@ function isDotActive(index: number): boolean {
   flex: 1;
 }
 
-.card-title h3 {
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-row h3 {
   font-size: 1.1rem;
-  margin-bottom: 4px;
+  margin: 0;
+}
+
+.title-icons {
+  display: flex;
+  gap: 5px;
+}
+
+.title-icon {
+  color: var(--primary);
+  cursor: help;
+}
+
+.link-icon {
+  cursor: pointer;
+}
+
+.link-icon:hover {
+  opacity: 0.8;
 }
 
 .card-title p {
   color: var(--gray);
   font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+/* 服务名称显示 */
+.password-details {
+  margin-bottom: 15px;
+  padding: 12px 15px;
+  background-color: var(--light);
+  border-radius: 8px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+}
+
+.detail-icon {
+  margin-right: 8px;
+  color: var(--primary);
+  min-width: 16px;
+}
+
+.detail-value {
+  flex: 1;
+  color: var(--gray);
+  word-break: break-all;
 }
 
 .password-field {
@@ -275,7 +392,7 @@ function isDotActive(index: number): boolean {
   background: var(--warning);
 }
 
-.strength-medium .dot:nth-child(-n+2) {
+.strength-medium .dot:nth-child(-n + 2) {
   background: orange;
 }
 

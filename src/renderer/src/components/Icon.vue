@@ -53,6 +53,7 @@ const iconMap: Record<string, string> = {
   'globe': '/src/assets/icons/globe.svg',
   'key': '/src/assets/icons/key.svg',
   'lock': '/src/assets/icons/lock.svg',
+  'link': '/src/assets/icons/link.svg',
   'menu': '/src/assets/icons/menu.svg',
   'mobile': '/src/assets/icons/mobile.svg',
   'network': '/src/assets/icons/network.svg',
@@ -74,10 +75,10 @@ const loadIcon = async (): Promise<void> => {
       console.warn(`Icon "${iconName}" not found in icon map`)
       return
     }
-    
+
     const response = await fetch(iconMap[iconName])
     const svgText = await response.text()
-    
+
     // 提取SVG内容（去除svg标签本身）
     const match = svgText.match(/<svg[^>]*>([\s\S]*)<\/svg>/)
     if (match && match[1]) {
