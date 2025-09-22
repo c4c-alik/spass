@@ -35,16 +35,12 @@ const switchToLogin = (): void => {
       <PasswordManager />
     </template>
     <template v-else>
-      <Login 
-        v-if="authView === 'login'" 
+      <Login
+        v-if="authView === 'login'"
         @login-success="handleLoginSuccess"
         @switch-to-register="switchToRegister"
       />
-      <Register 
-        v-else 
-        @register-success="handleRegisterSuccess"
-        @switch-to-login="switchToLogin"
-      />
+      <Register v-else @register-success="handleRegisterSuccess" @switch-to-login="switchToLogin" />
     </template>
   </div>
 </template>
@@ -54,5 +50,6 @@ const switchToLogin = (): void => {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  will-change: transform;
 }
 </style>
