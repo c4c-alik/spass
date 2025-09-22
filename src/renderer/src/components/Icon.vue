@@ -6,6 +6,7 @@
     :width="width"
     :height="height"
     :style="style"
+    :title="title"
     v-html="innerContent"
   ></svg>
 </template>
@@ -33,6 +34,10 @@ const props = defineProps({
   style: {
     type: Object,
     default: () => ({})
+  },
+  title: {
+    type: String,
+    default: ''
   }
 })
 
@@ -41,31 +46,31 @@ const innerContent = ref('')
 
 // 图标映射表
 const iconMap: Record<string, string> = {
-  'check': '/src/assets/icons/check.svg',
-  'clock': '/src/assets/icons/clock.svg',
-  'cog': '/src/assets/icons/cog.svg',
-  'copy': '/src/assets/icons/copy.svg',
+  check: '/src/assets/icons/check.svg',
+  clock: '/src/assets/icons/clock.svg',
+  cog: '/src/assets/icons/cog.svg',
+  copy: '/src/assets/icons/copy.svg',
   'credit-card': '/src/assets/icons/credit-card.svg',
-  'dice': '/src/assets/icons/dice.svg',
-  'edit': '/src/assets/icons/edit.svg',
+  dice: '/src/assets/icons/dice.svg',
+  edit: '/src/assets/icons/edit.svg',
   'eye-off': '/src/assets/icons/eye-off.svg',
-  'eye': '/src/assets/icons/eye.svg',
-  'globe': '/src/assets/icons/globe.svg',
-  'key': '/src/assets/icons/key.svg',
-  'lock': '/src/assets/icons/lock.svg',
-  'link': '/src/assets/icons/link.svg',
-  'menu': '/src/assets/icons/menu.svg',
-  'mobile': '/src/assets/icons/mobile.svg',
-  'network': '/src/assets/icons/network.svg',
+  eye: '/src/assets/icons/eye.svg',
+  globe: '/src/assets/icons/globe.svg',
+  key: '/src/assets/icons/key.svg',
+  lock: '/src/assets/icons/lock.svg',
+  link: '/src/assets/icons/link.svg',
+  menu: '/src/assets/icons/menu.svg',
+  mobile: '/src/assets/icons/mobile.svg',
+  network: '/src/assets/icons/network.svg',
   'plus-circle': '/src/assets/icons/plus-circle.svg',
-  'plus': '/src/assets/icons/plus.svg',
-  'search': '/src/assets/icons/search.svg',
-  'shield': '/src/assets/icons/shield.svg',
+  plus: '/src/assets/icons/plus.svg',
+  search: '/src/assets/icons/search.svg',
+  shield: '/src/assets/icons/shield.svg',
   'star-filled': '/src/assets/icons/star-filled.svg',
-  'star': '/src/assets/icons/star.svg',
-  'sync': '/src/assets/icons/sync.svg',
-  'trash': '/src/assets/icons/trash.svg',
-  'x': '/src/assets/icons/x.svg'
+  star: '/src/assets/icons/star.svg',
+  sync: '/src/assets/icons/sync.svg',
+  trash: '/src/assets/icons/trash.svg',
+  x: '/src/assets/icons/x.svg'
 }
 
 const loadIcon = async (): Promise<void> => {

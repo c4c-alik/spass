@@ -6,6 +6,10 @@ import UserDatabase from '../database/userDatabase'
 import { encryptionManager } from '../utils/encryption'
 import { MemoryDatabase } from '../database/memoryDatabase'
 
+// 设置应用区域和语言
+app.commandLine.appendSwitch('lang', 'zh-CN')
+app.commandLine.appendSwitch('locale', 'zh-CN')
+
 let userDb: UserDatabase
 let memoryDb: MemoryDatabase
 let autoLockTimeout: NodeJS.Timeout | null = null
@@ -65,7 +69,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  app.on('activate', function() {
+  app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
