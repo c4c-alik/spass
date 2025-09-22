@@ -6,6 +6,12 @@ import { promisify } from 'util'
 // 导入 PasswordEntry 类型
 import { PasswordEntry } from './index'
 
+// 定义内部使用的密码条目类型（数据库字段）
+// 用于数据库操作，将布尔类型的 isFavorited 转换为数字类型的 is_favorited
+interface DatabasePasswordEntry extends Omit<PasswordEntry, 'isFavorited'> {
+  is_favorited?: number;
+}
+
 export class MemoryDatabase {
   private db: Database.Database | null = null
   private dbPath: string
@@ -26,7 +32,7 @@ export class MemoryDatabase {
         if (err) {
           reject(err)
         } else {
-          // 创建密码表
+          // 创建密码表，添加 is_favorited 字段用于支持收藏功能
           this.db!.run(`
             CREATE TABLE IF NOT EXISTS passwords (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,6 +43,7 @@ export class MemoryDatabase {
               category TEXT DEFAULT 'other',
               notes TEXT,
               strength TEXT DEFAULT 'medium',
+              is_favorited INTEGER DEFAULT 0,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -74,20 +81,57 @@ export class MemoryDatabase {
         if (err) {
           reject(err)
         } else {
-          this.db!.run(`
-            INSERT INTO passwords
-            SELECT * FROM temp_db.passwords
-          `, async (err) => {
+          // 检查源表是否有 is_favorited 字段，以确保向后兼容性
+          this.db!.get(`
+            SELECT sql FROM temp_db.sqlite_master 
+            WHERE type='table' AND name='passwords'
+          `, (err, row: { sql: string } | undefined) => {
             if (err) {
               reject(err)
             } else {
-              // 删除临时文件
-              try {
-                await fs.unlink(tempPath)
-              } catch (unlinkErr) {
-                console.warn('Failed to delete temporary database file:', unlinkErr)
+              // 检查表结构是否包含 is_favorited 字段
+              const hasFavoriteColumn = row && row.sql.includes('is_favorited')
+              
+              if (hasFavoriteColumn) {
+                // 如果源表有 is_favorited 字段，直接复制所有数据
+                this.db!.run(`
+                  INSERT INTO passwords
+                  SELECT * FROM temp_db.passwords
+                `, async (err) => {
+                  if (err) {
+                    reject(err)
+                  } else {
+                    // 删除临时文件
+                    try {
+                      await fs.unlink(tempPath)
+                    } catch (unlinkErr) {
+                      console.warn('Failed to delete temporary database file:', unlinkErr)
+                    }
+                    resolve()
+                  }
+                })
+              } else {
+                // 如果源表没有 is_favorited 字段，手动添加该字段并复制数据
+                // 将旧数据的 is_favorited 字段设置为默认值 0 (未收藏)
+                this.db!.run(`
+                  INSERT INTO passwords 
+                  (id, service, username, password, url, category, notes, strength, is_favorited, created_at, updated_at)
+                  SELECT id, service, username, password, url, category, notes, strength, 0, created_at, updated_at 
+                  FROM temp_db.passwords
+                `, async (err) => {
+                  if (err) {
+                    reject(err)
+                  } else {
+                    // 删除临时文件
+                    try {
+                      await fs.unlink(tempPath)
+                    } catch (unlinkErr) {
+                      console.warn('Failed to delete temporary database file:', unlinkErr)
+                    }
+                    resolve()
+                  }
+                })
               }
-              resolve()
             }
           })
         }
@@ -105,301 +149,281 @@ export class MemoryDatabase {
       throw new Error('Database not initialized')
     }
 
-    console.log('Exporting memory database to buffer using alternative method')
-    
-    // 创建临时文件路径
-    const tempPath = path.join(app.getPath('temp'), `temp_export_db_${Date.now()}_${Math.random().toString(36).substring(2, 10)}.sqlite`)
-    console.log('Exporting to temporary file:', tempPath)
+    // 创建临时数据库文件，使用唯一文件名避免冲突
+    const tempPath = path.join(app.getPath('temp'), `temp_export_${Date.now()}_${Math.random().toString(36).substring(2, 10)}.sqlite`)
+    const fs = await import('fs/promises')
 
-    try {
-      // 创建一个新的磁盘数据库
-      const diskDb = new Database.Database(tempPath)
-      
-      // 等待数据库连接完成
-      await new Promise<void>((resolve, reject) => {
-        diskDb.on('open', () => resolve())
-        diskDb.on('error', reject)
-      })
+    // 创建临时数据库并复制表结构和数据
+    return new Promise((resolve, reject) => {
+      const tempDb = new Database.Database(tempPath, (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          // 在临时数据库中创建表
+          tempDb.run(`
+            CREATE TABLE passwords (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              service TEXT NOT NULL,
+              username TEXT NOT NULL,
+              password TEXT NOT NULL,
+              url TEXT,
+              category TEXT DEFAULT 'other',
+              notes TEXT,
+              strength TEXT DEFAULT 'medium',
+              is_favorited INTEGER DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `, (err) => {
+            if (err) {
+              reject(err)
+            } else {
+              // 从内存数据库复制数据到临时数据库
+              const exportStmt = tempDb.prepare(`
+                INSERT INTO passwords 
+                (id, service, username, password, url, category, notes, strength, is_favorited, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `)
 
-      // 在磁盘数据库中创建表结构
-      await this.createDatabaseSchema(diskDb)
-      
-      // 从内存数据库中获取所有密码数据并复制到磁盘数据库
-      await this.copyPasswordsToDiskDatabase(diskDb)
-      
-      // 关闭磁盘数据库连接
-      const diskClose = promisify(diskDb.close.bind(diskDb))
-      await diskClose()
-      
-      // 读取临时文件内容并返回Buffer
-      const fs = await import('fs/promises')
-      const buffer = await fs.readFile(tempPath)
-      console.log('Read temporary file, size:', buffer.length, 'bytes')
-      
-      // 删除临时文件
-      await this.deleteTemporaryFile(tempPath)
-      
-      return buffer
-    } catch (error) {
-      // 确保在出错时也尝试删除临时文件
-      await this.deleteTemporaryFile(tempPath)
-      
-      console.error('Failed to export database using alternative method:', error)
-      throw error
-    }
-  }
-
-  /**
-   * 在磁盘数据库中创建与内存数据库相同的表结构
-   * @param diskDb 磁盘数据库实例
-   */
-  private async createDatabaseSchema(diskDb: Database.Database): Promise<void> {
-    const diskExec = promisify(diskDb.exec.bind(diskDb))
-    await diskExec(`
-      CREATE TABLE IF NOT EXISTS passwords (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        service TEXT NOT NULL,
-        username TEXT NOT NULL,
-        password TEXT NOT NULL,
-        url TEXT,
-        category TEXT DEFAULT 'other',
-        notes TEXT,
-        strength TEXT DEFAULT 'medium',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
-  }
-
-  /**
-   * 将内存数据库中的密码数据复制到磁盘数据库
-   * 使用事务处理以提高性能
-   * @param diskDb 磁盘数据库实例
-   */
-  private async copyPasswordsToDiskDatabase(diskDb: Database.Database): Promise<void> {
-    // 从内存数据库中获取所有密码数据
-    const all = promisify(this.db!.all.bind(this.db!))
-    const passwords = await all('SELECT * FROM passwords')
-    console.log('Found', passwords.length, 'passwords to export')
-    
-    // 如果有数据，则逐条插入到磁盘数据库
-    if (passwords.length > 0) {
-      const diskRun = promisify(diskDb.run.bind(diskDb))
-      
-      // 开始事务以提高性能
-      await diskRun('BEGIN TRANSACTION')
-      
-      try {
-        // 逐条插入数据
-        for (const password of passwords) {
-          await diskRun(`
-            INSERT INTO passwords (id, service, username, password, url, category, notes, strength, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
-            password.id,
-            password.service,
-            password.username,
-            password.password,
-            password.url,
-            password.category,
-            password.notes,
-            password.strength,
-            password.created_at,
-            password.updated_at
-          ])
+              this.db!.each(`
+                SELECT id, service, username, password, url, category, notes, strength, is_favorited, created_at, updated_at
+                FROM passwords
+              `, (err, row: DatabasePasswordEntry) => {
+                if (err) {
+                  console.error('Error reading from memory database:', err)
+                } else {
+                  exportStmt.run([
+                    row.id,
+                    row.service,
+                    row.username,
+                    row.password,
+                    row.url,
+                    row.category,
+                    row.notes,
+                    row.strength,
+                    row.is_favorited,
+                    row.created_at,
+                    row.updated_at
+                  ], (err) => {
+                    if (err) {
+                      console.error('Error writing to temp database:', err)
+                    }
+                  })
+                }
+              }, (err) => {
+                if (err) {
+                  reject(err)
+                } else {
+                  exportStmt.finalize(() => {
+                    tempDb.close(async () => {
+                      try {
+                        // 读取临时数据库文件内容
+                        const buffer = await fs.readFile(tempPath)
+                        // 删除临时文件
+                        await fs.unlink(tempPath)
+                        resolve(buffer)
+                      } catch (readErr) {
+                        reject(readErr)
+                      }
+                    })
+                  })
+                }
+              })
+            }
+          })
         }
-        
-        // 提交事务
-        await diskRun('COMMIT')
-        console.log('Successfully inserted all passwords into disk database')
-      } catch (error) {
-        // 回滚事务
-        await diskRun('ROLLBACK')
-        throw error
-      }
-    }
+      })
+    })
   }
 
   /**
-   * 删除临时数据库文件
-   * @param tempPath 临时文件路径
-   */
-  private async deleteTemporaryFile(tempPath: string): Promise<void> {
-    try {
-      const fs = await import('fs/promises')
-      await fs.unlink(tempPath)
-      console.log('Successfully deleted temporary file:', tempPath)
-    } catch (unlinkErr) {
-      console.warn(`Failed to delete temporary database file: ${tempPath}`, unlinkErr)
-    }
-  }
-
-  /**
-   * 获取所有密码记录
-   * @returns 所有密码记录的数组
+   * 获取所有密码
+   * @returns Promise<PasswordEntry[]>
    */
   async getAllPasswords(): Promise<PasswordEntry[]> {
     if (!this.db) {
       throw new Error('Database not initialized')
     }
 
-    try {
-      const all = promisify(this.db.all.bind(this.db))
-      return await all(`
-        SELECT id, service, username, password, url, category, notes, strength,
-               datetime(created_at) as createdAt,
-               datetime(updated_at) as updatedAt
-        FROM passwords
-        ORDER BY service
-      `) as PasswordEntry[]
-    } catch (error) {
-      throw new Error(`Failed to get all passwords: ${(error as Error).message}`)
-    }
+    const all = promisify(this.db.all).bind(this.db)
+    const rows: DatabasePasswordEntry[] = await all(`
+      SELECT 
+        id, service, username, password, url, category, notes, strength, is_favorited,
+        created_at, updated_at
+      FROM passwords
+      ORDER BY created_at DESC
+    `)
+
+    // 将 is_favorited (number) 转换为 isFavorited (boolean)
+    return rows.map((row) => ({
+      ...row,
+      isFavorited: row.is_favorited === 1,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
   }
 
   /**
-   * 添加新密码
-   * 注意：不使用 promisify 包装 SQLite 的 run 方法，因为会丢失 this.lastID 上下文
-   * @param password 要添加的密码数据
-   * @returns 新添加记录的ID
+   * 添加密码
+   * @param password PasswordEntry
+   * @returns Promise<number | undefined>
    */
   async addPassword(password: PasswordEntry): Promise<number | undefined> {
     if (!this.db) {
       throw new Error('Database not initialized')
     }
 
-    // 使用 function 回调而非箭头函数，以确保能正确访问 this.lastID
+    // 使用传统回调方式而非promisify，以确保能正确访问this.lastID
     return new Promise((resolve, reject) => {
-      this.db!.run(
-        `INSERT INTO passwords (service, username, password, url, category, notes, strength)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          password.service,
-          password.username,
-          password.password,
-          password.url || null,
-          password.category || 'other',
-          password.notes || null,
-          password.strength || 'medium'
-        ],
-        function(err) {
-          if (err) {
-            reject(err)
-          } else {
-            // this.lastID 只在使用 function 关键字定义的回调函数中可用
-            resolve(this.lastID)
-          }
+      this.db!.run(`
+        INSERT INTO passwords 
+        (service, username, password, url, category, notes, strength, is_favorited)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        password.service,
+        password.username,
+        password.password,
+        password.url || null,
+        password.category || 'other',
+        password.notes || null,
+        password.strength || 'medium',
+        password.isFavorited ? 1 : 0  // 将布尔值转换为数字存储
+      ], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          // this.lastID包含插入记录的ID，只有在回调函数中才能正确访问
+          resolve(this.lastID)
         }
-      )
+      })
     })
   }
 
   /**
-   * 更新密码记录
-   * 注意：不使用 promisify 包装 SQLite 的 run 方法，因为会丢失 this.changes 上下文
-   * @param id 密码记录ID
-   * @param password 要更新的密码数据
-   * @returns 受影响的行数
-   */
-  async updatePassword(id: number, password: PasswordEntry): Promise<number> {
-    if (!this.db) {
-      throw new Error('Database not initialized')
-    }
-
-    if (!id) {
-      throw new Error('Password ID is required for update')
-    }
-
-    return new Promise((resolve, reject) => {
-      // 不使用 promisify，直接使用回调函数以确保能正确访问 this.changes
-      this.db!.run(
-        `UPDATE passwords SET
-          service = ?,
-          username = ?,
-          password = ?,
-          url = ?,
-          category = ?,
-          notes = ?,
-          strength = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?`,
-        [
-          password.service,
-          password.username,
-          password.password,
-          password.url || null,
-          password.category || 'other',
-          password.notes || null,
-          password.strength || 'medium',
-          id
-        ],
-        function (err) {
-          if (err) {
-            reject(err)
-          } else {
-            // this.changes 只在使用 function 关键字定义的回调函数中可用
-            resolve(this.changes || 0)
-          }
-        }
-      )
-    })
-  }
-
-  /**
-   * 删除密码记录
-   * 注意：不使用 promisify 包装 SQLite 的 run 方法，因为会丢失 this.changes 上下文
-   * @param id 要删除的密码记录ID
-   * @returns 受影响的行数
+   * 删除密码
+   * @param id 密码ID
+   * @returns Promise<number>
    */
   async deletePassword(id: number): Promise<number> {
     if (!this.db) {
       throw new Error('Database not initialized')
     }
 
-    if (!id) {
-      throw new Error('Password ID is required for deletion')
-    }
-
+    // 使用传统回调方式而非promisify，以确保能正确访问this.changes
     return new Promise((resolve, reject) => {
-      // 不使用 promisify，直接使用回调函数以确保能正确访问 this.changes
-      this.db!.run(
-        'DELETE FROM passwords WHERE id = ?',
-        [id],
-        function (err) {
-          if (err) {
-            reject(err)
-          } else {
-            // this.changes 只在使用 function 关键字定义的回调函数中可用
-            resolve(this.changes || 0)
-          }
+      this.db!.run('DELETE FROM passwords WHERE id = ?', [id], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          // this.changes包含受影响的行数，只有在回调函数中才能正确访问
+          resolve(this.changes || 0)
         }
-      )
+      })
     })
   }
 
   /**
-   * 按服务、用户名或URL搜索密码
+   * 更新密码
+   * @param id 密码ID
+   * @param password PasswordEntry
+   * @returns Promise<number>
+   */
+  async updatePassword(id: number, password: PasswordEntry): Promise<number> {
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
+
+    // 使用传统回调方式而非promisify，以确保能正确访问this.changes
+    return new Promise((resolve, reject) => {
+      this.db!.run(`
+        UPDATE passwords SET
+          service = ?, username = ?, password = ?, url = ?, category = ?,
+          notes = ?, strength = ?, is_favorited = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [
+        password.service,
+        password.username,
+        password.password,
+        password.url || null,
+        password.category || 'other',
+        password.notes || null,
+        password.strength || 'medium',
+        password.isFavorited ? 1 : 0,  // 将布尔值转换为数字存储
+        id
+      ], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          // this.changes包含受影响的行数，只有在回调函数中才能正确访问
+          resolve(this.changes || 0)
+        }
+      })
+    })
+  }
+
+  /**
+   * 搜索密码
    * @param query 搜索关键词
-   * @returns 匹配的密码记录数组
+   * @returns Promise<PasswordEntry[]>
    */
   async searchPasswords(query: string): Promise<PasswordEntry[]> {
     if (!this.db) {
       throw new Error('Database not initialized')
     }
 
-    if (!query) {
-      return await this.getAllPasswords()
+    const all = promisify(this.db.all).bind(this.db)
+    const rows: DatabasePasswordEntry[] = await all(`
+      SELECT 
+        id, service, username, password, url, category, notes, strength, is_favorited,
+        created_at, updated_at
+      FROM passwords
+      WHERE service LIKE ? OR username LIKE ?
+      ORDER BY created_at DESC
+    `, [`%${query}%`, `%${query}%`])
+
+    // 将 is_favorited (number) 转换为 isFavorited (boolean)
+    return rows.map((row) => ({
+      ...row,
+      isFavorited: row.is_favorited === 1,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+  }
+
+  /**
+   * 切换收藏状态
+   * @param id 密码ID
+   * @returns Promise<void>
+   */
+  async toggleFavorite(id: number): Promise<void> {
+    if (!this.db) {
+      throw new Error('Database not initialized')
     }
 
-    const all = promisify(this.db.all.bind(this.db))
-    return await all(`
-      SELECT id, service, username, password, url, category, notes, strength,
-             datetime(created_at) as createdAt,
-             datetime(updated_at) as updatedAt
-      FROM passwords
-      WHERE service LIKE ? OR username LIKE ? OR url LIKE ?
-      ORDER BY service
-    `, [`%${query}%`, `%${query}%`, `%${query}%`]) as PasswordEntry[]
+    // 先获取当前收藏状态
+    const get = promisify(this.db.get).bind(this.db)
+    const row: { is_favorited: number } | undefined = await get('SELECT is_favorited FROM passwords WHERE id = ?', [id])
+    
+    if (!row) {
+      throw new Error('Password not found')
+    }
+
+    // 切换状态 (0->1, 1->0)
+    const newFavoriteStatus = row.is_favorited === 1 ? 0 : 1
+
+    // 更新数据库，使用传统回调方式确保能正确处理结果
+    return new Promise((resolve, reject) => {
+      this.db!.run('UPDATE passwords SET is_favorited = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        newFavoriteStatus,
+        id
+      ], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
   }
 
   /**
@@ -421,3 +445,5 @@ export class MemoryDatabase {
     }
   }
 }
+
+export default MemoryDatabase
