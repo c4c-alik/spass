@@ -1,14 +1,23 @@
 <template>
-  <svg
-    v-if="svgContent"
-    class="icon"
-    :class="className"
-    :width="width"
-    :height="height"
-    :style="style"
-    :title="title"
-    v-html="innerContent"
-  ></svg>
+  <div class="icon-wrapper" @mouseenter="showTooltip" @mouseleave="hideTooltip">
+    <svg
+      v-if="svgContent"
+      class="icon"
+      :class="className"
+      :width="width"
+      :height="height"
+      :style="style"
+      v-html="innerContent"
+    ></svg>
+    <div 
+      v-if="title && tooltipVisible" 
+      class="tooltip show"
+      :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }"
+    >
+      {{ title }}
+      <div class="tooltip-arrow"></div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -98,9 +107,41 @@ const loadIcon = async (): Promise<void> => {
 }
 
 watch(() => props.name, loadIcon, { immediate: true })
+
+// Tooltip相关逻辑
+const tooltipVisible = ref(false)
+const tooltipPosition = ref({ top: 0, left: 0 })
+
+function showTooltip(event: MouseEvent): void {
+  if (!props.title) return
+
+  tooltipVisible.value = true
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  
+  // 使用requestAnimationFrame确保DOM更新完成后计算位置
+  requestAnimationFrame(() => {
+    const tooltip = document.querySelector('.tooltip.show')
+    if (tooltip) {
+      const tooltipRect = tooltip.getBoundingClientRect()
+      tooltipPosition.value = {
+        top: rect.bottom + 8,
+        left: rect.left + rect.width / 2 - tooltipRect.width / 2
+      }
+    }
+  })
+}
+
+function hideTooltip(): void {
+  tooltipVisible.value = false
+}
 </script>
 
 <style scoped>
+.icon-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 .icon {
   fill: none;
   stroke: currentColor;
@@ -109,5 +150,31 @@ watch(() => props.name, loadIcon, { immediate: true })
   stroke-linejoin: round;
   display: inline-block;
   vertical-align: middle;
+}
+
+/* Tooltip样式 */
+.tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.tooltip-arrow {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid rgba(0, 0, 0, 0.9);
 }
 </style>
