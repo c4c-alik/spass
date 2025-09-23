@@ -11,7 +11,7 @@
           <!-- 将分类和链接图标移到标题旁边 -->
           <div class="title-icons">
             <Icon
-              v-if="password.url"
+              v-if="password.url && isValidUrl(password.url)"
               name="link"
               :width="24"
               :height="24"
@@ -19,7 +19,7 @@
               @click.stop="openLink(password.url)"
             />
             <Icon
-              v-if="password.category"
+              v-if="password.category && getCategoryIcon(password.category)"
               :name="getCategoryIcon(password.category)"
               :width="24"
               :height="24"
@@ -143,11 +143,34 @@ function getCategoryIcon(category: string): string {
 }
 
 /**
+ * 验证URL是否有效
+ * @param url 待验证的URL
+ * @returns 是否为有效URL
+ */
+function isValidUrl(url: string): boolean {
+  if (!url) return false
+  try {
+    // 如果URL没有协议，自动添加https://
+    if (!url.match(/^https?:\/\//)) {
+      url = 'https://' + url
+    }
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * 打开链接
  * @param url 链接URL
  */
 function openLink(url: string): void {
   if (url) {
+    // 如果URL没有协议，自动添加https://
+    if (!url.match(/^https?:\/\//)) {
+      url = 'https://' + url
+    }
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 }
