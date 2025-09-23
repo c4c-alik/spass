@@ -1,5 +1,5 @@
 <template>
-  <div class="icon-wrapper" @mouseenter="showTooltip" @mouseleave="hideTooltip">
+  <div ref="iconWrapper" class="icon-wrapper">
     <svg
       v-if="svgContent"
       class="icon"
@@ -7,21 +7,15 @@
       :width="width"
       :height="height"
       :style="style"
+      @mouseenter="showTooltip"
+      @mouseleave="hideTooltip"
       v-html="innerContent"
     ></svg>
-    <div 
-      v-if="title && tooltipVisible" 
-      class="tooltip show"
-      :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }"
-    >
-      {{ title }}
-      <div class="tooltip-arrow"></div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   name: {
@@ -52,6 +46,8 @@ const props = defineProps({
 
 const svgContent = ref('')
 const innerContent = ref('')
+const iconWrapper = ref<HTMLElement | null>(null)
+let tooltipElement: HTMLElement | null = null
 
 // 图标映射表
 const iconMap: Record<string, string> = {
@@ -108,37 +104,111 @@ const loadIcon = async (): Promise<void> => {
 
 watch(() => props.name, loadIcon, { immediate: true })
 
-// Tooltip相关逻辑
-const tooltipVisible = ref(false)
-const tooltipPosition = ref({ top: 0, left: 0 })
+function createTooltip(): void {
+  if (!tooltipElement) {
+    tooltipElement = document.createElement('div')
+    tooltipElement.className = 'icon-tooltip'
+    tooltipElement.innerHTML = `
+      <div class="tooltip-content">${props.title}</div>
+      <div class="tooltip-arrow"></div>
+    `
+    document.body.appendChild(tooltipElement)
 
-function showTooltip(event: MouseEvent): void {
+    // 添加样式
+    const style = document.createElement('style')
+    style.textContent = `
+      .icon-tooltip {
+        position: fixed;
+        background-color: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 10000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .icon-tooltip.show {
+        opacity: 1;
+      }
+
+      .tooltip-arrow {
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 6px solid rgba(0, 0, 0, 0.9);
+      }
+
+      .icon-tooltip.top .tooltip-arrow {
+        top: auto;
+        bottom: -6px;
+        border-bottom: none;
+        border-top: 6px solid rgba(0, 0, 0, 0.9);
+      }
+    `
+    document.head.appendChild(style)
+  }
+}
+
+function showTooltip(): void {
   if (!props.title) return
 
-  tooltipVisible.value = true
-  const rect = (event.target as HTMLElement).getBoundingClientRect()
-  
-  // 使用requestAnimationFrame确保DOM更新完成后计算位置
-  requestAnimationFrame(() => {
-    const tooltip = document.querySelector('.tooltip.show')
-    if (tooltip) {
-      const tooltipRect = tooltip.getBoundingClientRect()
-      tooltipPosition.value = {
-        top: rect.bottom + 8,
-        left: rect.left + rect.width / 2 - tooltipRect.width / 2
-      }
-    }
-  })
+  createTooltip()
+
+  if (!iconWrapper.value || !tooltipElement) return
+
+  const rect = iconWrapper.value.getBoundingClientRect()
+  tooltipElement.querySelector('.tooltip-content')!.textContent = props.title
+  tooltipElement.classList.add('show')
+
+  // 计算tooltip位置
+  const tooltipRect = tooltipElement.getBoundingClientRect()
+  let left = rect.left + rect.width / 2 - tooltipRect.width / 2
+  let top = rect.bottom + 8
+
+  // 确保tooltip不会超出视口边界
+  const padding = 8
+  let positionClass = ''
+
+  if (left < padding) {
+    left = padding
+  } else if (left + tooltipRect.width > window.innerWidth - padding) {
+    left = window.innerWidth - tooltipRect.width - padding
+  }
+
+  if (top + tooltipRect.height > window.innerHeight - padding) {
+    top = rect.top - tooltipRect.height - 8
+    positionClass = 'top'
+  }
+
+  tooltipElement.style.left = `${left}px`
+  tooltipElement.style.top = `${top}px`
+  tooltipElement.className = `icon-tooltip show ${positionClass}`
 }
 
 function hideTooltip(): void {
-  tooltipVisible.value = false
+  if (tooltipElement) {
+    tooltipElement.classList.remove('show')
+  }
 }
+
+onBeforeUnmount(() => {
+  if (tooltipElement) {
+    tooltipElement.remove()
+  }
+})
 </script>
 
 <style scoped>
 .icon-wrapper {
-  position: relative;
   display: inline-block;
 }
 
@@ -150,31 +220,5 @@ function hideTooltip(): void {
   stroke-linejoin: round;
   display: inline-block;
   vertical-align: middle;
-}
-
-/* Tooltip样式 */
-.tooltip {
-  position: fixed;
-  background-color: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.tooltip-arrow {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 6px solid rgba(0, 0, 0, 0.9);
 }
 </style>
