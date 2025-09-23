@@ -75,6 +75,7 @@ const iconMap: Record<string, string> = {
   star: '/src/assets/icons/star.svg',
   sync: '/src/assets/icons/sync.svg',
   trash: '/src/assets/icons/trash.svg',
+  user: '/src/assets/icons/user.svg',
   x: '/src/assets/icons/x.svg'
 }
 

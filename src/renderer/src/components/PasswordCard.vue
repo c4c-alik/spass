@@ -28,7 +28,10 @@
             />
           </div>
         </div>
-        <p>{{ password.username }}</p>
+        <p>
+          <Icon name="user" :width="16" :height="16" class="user-icon" />
+          {{ password.username }}
+        </p>
       </div>
     </div>
 
@@ -301,6 +304,13 @@ function isDotActive(index: number): boolean {
   color: var(--gray);
   font-size: 0.9rem;
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-icon {
+  color: var(--primary);
 }
 
 /* 服务名称显示 */
