@@ -76,7 +76,9 @@ const iconMap: Record<string, string> = {
   sync: '/src/assets/icons/sync.svg',
   trash: '/src/assets/icons/trash.svg',
   user: '/src/assets/icons/user.svg',
-  x: '/src/assets/icons/x.svg'
+  x: '/src/assets/icons/x.svg',
+  'file-import': '/src/assets/icons/file-import.svg',
+  'file-export': '/src/assets/icons/file-export.svg'
 }
 
 const loadIcon = async (): Promise<void> => {
