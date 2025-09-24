@@ -17,6 +17,15 @@
           <Icon name="cog" :width="24" :height="24" />
           <span>设置</span>
         </button>
+        <!-- 导入导出按钮 -->
+        <button class="btn" @click="openImportModal" type="button">
+          <Icon name="file-import" :width="24" :height="24" />
+          <span>导入</span>
+        </button>
+        <button class="btn" @click="openExportModal" type="button">
+          <Icon name="file-export" :width="24" :height="24" />
+          <span>导出</span>
+        </button>
         <!-- 汉堡菜单按钮 -->
         <button class="btn hamburger-btn" @click="toggleSidebar" type="button">
           <Icon name="menu" :width="24" :height="24" />
@@ -320,6 +329,17 @@ const checkSecurity = (): void => {
 const toggleSidebar = (): void => {
   isSidebarHidden.value = !isSidebarHidden.value
 }
+
+// 打开导入模态框
+const openImportModal = (): void => {
+  console.log('Opening import modal...')
+}
+
+// 打开导出模态框
+const openExportModal = (): void => {
+  console.log('Opening export modal...')
+}
+
 </script>
 
 <style scoped>
