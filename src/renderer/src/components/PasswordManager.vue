@@ -17,17 +17,6 @@
           <Icon name="cog" :width="24" :height="24" />
           <span>设置</span>
         </button>
-        <!-- 导入导出按钮 -->
-        <div class="import-export">
-          <button class="btn" @click="openImportModal" type="button">
-            <Icon name="file-import" :width="24" :height="24" />
-            <span>导入</span>
-          </button>
-          <button class="btn" @click="openExportModal" type="button">
-            <Icon name="file-export" :width="24" :height="24" />
-            <span>导出</span>
-          </button>
-        </div>
         <!-- 汉堡菜单按钮 -->
         <button class="btn hamburger-btn" @click="toggleSidebar" type="button">
           <Icon name="menu" :width="24" :height="24" />
@@ -42,8 +31,9 @@
           type="text"
           placeholder="搜索密码..."
           v-model="searchQuery"
+          @input="searchPasswords"
         >
-        <button type="button" @click="searchPasswords">
+        <button type="button">
           <Icon name="search" :width="24" :height="24" />
         </button>
       </div>
@@ -154,83 +144,6 @@
       @close="closeModal"
       @save="savePassword"
     />
-
-    <!-- 导入模态框 -->
-    <div class="modal-overlay" :class="{ visible: showImportModal }" @click="closeImportModal">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-title">导入密码</div>
-          <button class="modal-close" @click="closeImportModal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="file-drop" @dragover.prevent="onDragOver" @dragleave="onDragLeave" @drop.prevent="onDrop"
-               @click="triggerFileSelect" :class="{ 'drag-over': isDragOver }">
-            <Icon name="cloud-upload" :width="32" :height="32" />
-            <p>拖放文件到此处或点击上传</p>
-            <div class="file-types">支持格式: CSV, JSON</div>
-          </div>
-
-          <div class="form-group">
-            <label for="importFormat">选择格式</label>
-            <select id="importFormat" v-model="importFormat">
-              <option value="json">JSON (SPass格式)</option>
-              <option value="csv">CSV (通用格式)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="importStrategy">导入策略</label>
-            <select id="importStrategy" v-model="importStrategy">
-              <option value="merge">合并 - 保留现有项目，添加新项目</option>
-              <option value="replace">替换 - 删除所有现有项目后导入</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-btn secondary" @click="closeImportModal">取消</button>
-          <button class="modal-btn primary" @click="startImport" :disabled="!selectedFile">开始导入</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 导出模态框 -->
-    <div class="modal-overlay" :class="{ visible: showExportModal }" @click="closeExportModal">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-title">导出密码</div>
-          <button class="modal-close" @click="closeExportModal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="exportFormat">选择格式</label>
-            <select id="exportFormat" v-model="exportFormat">
-              <option value="json">JSON (SPass格式)</option>
-              <option value="csv">CSV (通用格式)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="exportScope">导出范围</label>
-            <select id="exportScope" v-model="exportScope">
-              <option value="all">所有密码</option>
-              <option value="current">当前分类</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="exportPassword">加密密码 (可选)</label>
-            <input type="password" id="exportPassword" v-model="exportPassword" placeholder="为导出文件设置密码">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-btn secondary" @click="closeExportModal">取消</button>
-          <button class="modal-btn primary" @click="startExport">开始导出</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 隐藏的文件输入框 -->
-    <input type="file" ref="fileInput" style="display: none" @change="handleFileSelect" accept=".json,.csv">
   </div>
 </template>
 
@@ -239,7 +152,6 @@ import { computed, onMounted, ref } from 'vue'
 import PasswordCard from './PasswordCard.vue'
 import PasswordModal from './PasswordModal.vue'
 import Icon from './Icon.vue'
-import { importData, exportData } from '../utils/data-import-export'
 
 // 定义密码接口
 interface Password {
@@ -265,18 +177,6 @@ const activeCategory = ref('all')
 const showModal = ref(false)
 const editingPassword = ref<Password | null>(null)
 const isSidebarHidden = ref(false)
-
-// 导入导出相关状态
-const showImportModal = ref(false)
-const showExportModal = ref(false)
-const selectedFile = ref<File | null>(null)
-const importFormat = ref('json')
-const importStrategy = ref('merge')
-const exportFormat = ref('json')
-const exportScope = ref('all')
-const exportPassword = ref('')
-const isDragOver = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
 
 // 计算属性
 const filteredPasswords = computed(() => {
@@ -337,8 +237,7 @@ const setCategory = (category: string): void => {
 
 // 搜索密码
 const searchPasswords = (): void => {
-  // 触发重新计算filteredPasswords
-  filteredPasswords.value
+  // 搜索逻辑已在计算属性中处理
 }
 
 // 显示添加密码模态框
@@ -421,106 +320,6 @@ const checkSecurity = (): void => {
 const toggleSidebar = (): void => {
   isSidebarHidden.value = !isSidebarHidden.value
 }
-
-// 导入导出功能
-const openImportModal = (): void => {
-  showImportModal.value = true
-}
-
-const closeImportModal = (): void => {
-  showImportModal.value = false
-  selectedFile.value = null
-  importFormat.value = 'json'
-  importStrategy.value = 'merge'
-}
-
-const openExportModal = (): void => {
-  showExportModal.value = true
-}
-
-const closeExportModal = (): void => {
-  showExportModal.value = false
-  exportFormat.value = 'json'
-  exportScope.value = 'all'
-  exportPassword.value = ''
-}
-
-const triggerFileSelect = (): void => {
-  if (fileInput.value) {
-    fileInput.value.click()
-  }
-}
-
-const handleFileSelect = (event: Event): void => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    selectedFile.value = target.files[0]
-  }
-}
-
-const onDragOver = (): void => {
-  isDragOver.value = true
-}
-
-const onDragLeave = (): void => {
-  isDragOver.value = false
-}
-
-const onDrop = (event: DragEvent): void => {
-  isDragOver.value = false
-  if (event.dataTransfer && event.dataTransfer.files.length > 0) {
-    selectedFile.value = event.dataTransfer.files[0]
-  }
-}
-
-const startImport = async (): Promise<void> => {
-  if (!selectedFile.value) {
-    alert('请选择一个文件')
-    return
-  }
-
-  try {
-    await importData(selectedFile.value, importFormat.value)
-    await loadPasswords()
-    closeImportModal()
-    alert('导入成功!')
-  } catch (error) {
-    console.error('导入失败:', error)
-    alert('导入失败: ' + (error as Error).message)
-  }
-}
-
-const startExport = async (): Promise<void> => {
-  try {
-    // 根据导出范围过滤密码
-    let passwordsToExport = passwords.value
-    if (exportScope.value === 'current') {
-      passwordsToExport = filteredPasswords.value
-    }
-
-    // 导出数据
-    const data = await exportData(exportFormat.value, passwordsToExport)
-
-    // 创建并下载文件
-    const mimeType = exportFormat.value === 'csv' ? 'text/csv' : 'application/json'
-    const extension = exportFormat.value === 'csv' ? 'csv' : 'json'
-    const blob = new Blob([data], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `spass-export-${new Date().toISOString().slice(0, 10)}.${extension}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    closeExportModal()
-    alert('导出成功!')
-  } catch (error) {
-    console.error('导出失败:', error)
-    alert('导出失败: ' + (error as Error).message)
-  }
-}
 </script>
 
 <style scoped>
@@ -560,7 +359,6 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: relative;
 }
 
 /* 头部样式 */
@@ -632,12 +430,6 @@ body {
   z-index: 2;
 }
 
-.import-export {
-  display: flex;
-  gap: 8px;
-  margin-left: 15px;
-}
-
 .hamburger-btn {
   display: none; /* 默认隐藏汉堡菜单按钮 */
 }
@@ -690,8 +482,6 @@ body {
   padding: 25px;
   background: white;
   border-bottom: 1px solid var(--border);
-  z-index: 10;
-  position: relative;
 }
 
 .search-box {
@@ -699,7 +489,6 @@ body {
   background: var(--light);
   border-radius: 10px;
   overflow: hidden;
-  position: relative;
 }
 
 .search-box input {
@@ -708,8 +497,6 @@ body {
   padding: 12px 15px;
   background: transparent;
   font-size: 1rem;
-  position: relative;
-  z-index: 2;
 }
 
 .search-box input:focus {
@@ -722,8 +509,6 @@ body {
   border: none;
   padding: 0 20px;
   cursor: pointer;
-  position: relative;
-  z-index: 2;
 }
 
 /* 主内容区 */
@@ -851,166 +636,6 @@ body {
   gap: 8px;
 }
 
-/* 模态窗口样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-overlay.visible {
-  display: flex;
-}
-
-.modal {
-  background: white;
-  border-radius: 12px;
-  width: 500px;
-  max-width: 90%;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-.modal-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-title {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: var(--gray);
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-form {
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: var(--dark);
-}
-
-.form-group select,
-.form-group input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--dark);
-  background: white;
-}
-
-.form-group select:focus,
-.form-group input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
-}
-
-.file-drop {
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  padding: 30px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.3s;
-  margin-bottom: 20px;
-  background-color: var(--light);
-}
-
-.file-drop:hover,
-.file-drop.drag-over {
-  border-color: var(--primary);
-  background-color: rgba(67, 97, 238, 0.05);
-}
-
-.file-drop i,
-.file-drop svg {
-  font-size: 32px;
-  color: var(--gray);
-  margin-bottom: 10px;
-}
-
-.file-drop p {
-  color: var(--gray);
-  margin-bottom: 5px;
-}
-
-.file-drop .file-types {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.modal-footer {
-  padding: 20px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-}
-
-.modal-btn {
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-left: 10px;
-}
-
-.modal-btn.primary {
-  background: var(--primary);
-  color: white;
-  border: none;
-}
-
-.modal-btn.primary:hover {
-  background: var(--secondary);
-}
-
-.modal-btn.secondary {
-  background: var(--light);
-  color: #4b5563;
-  border: 1px solid var(--border);
-}
-
-.modal-btn.secondary:hover {
-  background: #e5e7eb;
-}
-
-.modal-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* 中等屏幕设备适配 (900px-1200px) */
 @media (min-width: 900px) and (max-width: 1199px) {
   .password-manager {
@@ -1090,14 +715,6 @@ body {
   }
 
   .btn {
-    padding: 6px;
-  }
-
-  .import-export span {
-    display: none;
-  }
-
-  .import-export .btn {
     padding: 6px;
   }
 
