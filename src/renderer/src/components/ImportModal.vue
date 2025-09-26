@@ -1,0 +1,294 @@
+<template>
+  <div class="modal-overlay" :class="{ visible: visible }" @click="closeModal">
+    <div class="modal" @click.stop>
+      <div class="modal-header">
+        <div class="modal-title">导入密码</div>
+        <button class="modal-close" @click="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div
+          class="file-drop"
+          :class="{ 'drag-over': isDragOver }"
+          @dragover.prevent="onDragOver"
+          @dragleave="onDragLeave"
+          @drop.prevent="onDrop"
+          @click="triggerFileSelect"
+        >
+          <Icon name="cloud-upload" :width="32" :height="32" />
+          <p>拖放文件到此处或点击上传</p>
+          <div class="file-types">支持格式: CSV, JSON</div>
+        </div>
+
+        <div class="form-group">
+          <label for="importFormat">选择格式</label>
+          <select id="importFormat" v-model="importFormat">
+            <option value="json">JSON (SPass格式)</option>
+            <option value="csv">CSV (通用格式)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="importStrategy">导入策略</label>
+          <select id="importStrategy" v-model="importStrategy">
+            <option value="merge">合并 - 保留现有项目，添加新项目</option>
+            <option value="replace">替换 - 删除所有现有项目后导入</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn secondary" @click="closeModal">取消</button>
+        <button class="modal-btn primary" :disabled="!selectedFile" @click="startImport">
+          开始导入
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import Icon from './Icon.vue'
+import { importData } from '../utils/data-import-export'
+
+const props = defineProps<{
+  visible: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'import-success'): void
+}>()
+
+// 导入相关状态
+const selectedFile = ref<File | null>(null)
+const importFormat = ref('json')
+const importStrategy = ref('merge')
+const isDragOver = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+// 监听visible变化，重置状态
+watch(
+  () => props.visible,
+  (newVal) => {
+    if (!newVal) {
+      // 模态框关闭时重置状态
+      selectedFile.value = null
+      importFormat.value = 'json'
+      importStrategy.value = 'merge'
+    }
+  }
+)
+
+const closeModal = () => {
+  emit('close')
+}
+
+const triggerFileSelect = () => {
+  // 创建临时的文件输入元素
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json,.csv'
+  input.style.display = 'none'
+  input.onchange = (event) => {
+    const target = event.target as HTMLInputElement
+    if (target.files && target.files.length > 0) {
+      selectedFile.value = target.files[0]
+    }
+  }
+  document.body.appendChild(input)
+  input.click()
+  document.body.removeChild(input)
+}
+
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    selectedFile.value = target.files[0]
+  }
+}
+
+const onDragOver = () => {
+  isDragOver.value = true
+}
+
+const onDragLeave = () => {
+  isDragOver.value = false
+}
+
+const onDrop = (event: DragEvent) => {
+  isDragOver.value = false
+  if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+    selectedFile.value = event.dataTransfer.files[0]
+  }
+}
+
+const startImport = async () => {
+  if (!selectedFile.value) {
+    alert('请选择一个文件')
+    return
+  }
+
+  try {
+    await importData(selectedFile.value, importFormat.value, importStrategy.value)
+    closeModal()
+    emit('import-success')
+    alert('导入成功!')
+  } catch (error) {
+    console.error('导入失败:', error)
+    alert('导入失败: ' + (error as Error).message)
+  }
+}
+</script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay.visible {
+  display: flex;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--gray);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--dark);
+}
+
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--dark);
+  background: white;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+
+.file-drop {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+  margin-bottom: 20px;
+  background-color: var(--light);
+}
+
+.file-drop:hover,
+.file-drop.drag-over {
+  border-color: var(--primary);
+  background-color: rgba(67, 97, 238, 0.05);
+}
+
+.file-drop svg {
+  font-size: 32px;
+  color: var(--gray);
+  margin-bottom: 10px;
+}
+
+.file-drop p {
+  color: var(--gray);
+  margin-bottom: 5px;
+}
+
+.file-drop .file-types {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.modal-btn.primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+}
+
+.modal-btn.primary:hover {
+  background: var(--secondary);
+}
+
+.modal-btn.secondary {
+  background: var(--light);
+  color: #4b5563;
+  border: 1px solid var(--border);
+}
+
+.modal-btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.modal-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+</style>

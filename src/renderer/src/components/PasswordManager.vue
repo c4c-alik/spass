@@ -9,25 +9,25 @@
         <span>SPass</span>
       </div>
       <div class="actions">
-        <button class="btn sync-btn" @click="syncPasswords" type="button">
+        <button class="btn sync-btn" type="button" @click="syncPasswords">
           <Icon name="sync" :width="24" :height="24" />
           <span>同步</span>
         </button>
-        <button class="btn" @click="openSettings" type="button">
+        <button class="btn" type="button" @click="openSettings">
           <Icon name="cog" :width="24" :height="24" />
           <span>设置</span>
         </button>
         <!-- 导入导出按钮 -->
-        <button class="btn" @click="openImportModal" type="button">
+        <button class="btn" type="button" @click="openImportModal">
           <Icon name="file-import" :width="24" :height="24" />
           <span>导入</span>
         </button>
-        <button class="btn" @click="openExportModal" type="button">
+        <button class="btn" type="button" @click="openExportModal">
           <Icon name="file-export" :width="24" :height="24" />
           <span>导出</span>
         </button>
         <!-- 汉堡菜单按钮 -->
-        <button class="btn hamburger-btn" @click="toggleSidebar" type="button">
+        <button class="btn hamburger-btn" type="button" @click="toggleSidebar">
           <Icon name="menu" :width="24" :height="24" />
         </button>
       </div>
@@ -37,11 +37,11 @@
     <div class="search-area">
       <div class="search-box">
         <input
+          v-model="searchQuery"
           type="text"
           placeholder="搜索密码..."
-          v-model="searchQuery"
           @input="searchPasswords"
-        >
+        />
         <button type="button">
           <Icon name="search" :width="24" :height="24" />
         </button>
@@ -114,7 +114,7 @@
       <div class="password-list">
         <div class="section-title">
           <h2>{{ listTitle }}</h2>
-          <button class="add-btn" @click="showAddPasswordModal" type="button">
+          <button class="add-btn" type="button" @click="showAddPasswordModal">
             <Icon name="plus" :width="24" :height="24" />
             <span>添加新密码</span>
           </button>
@@ -153,6 +153,22 @@
       @close="closeModal"
       @save="savePassword"
     />
+
+    <!-- 导入模态框 -->
+    <ImportModal
+      :visible="showImportModal"
+      @close="closeImportModal"
+      @import-success="loadPasswords"
+    />
+
+    <!-- 导出模态框 -->
+    <ExportModal
+      :visible="showExportModal"
+      :passwords="passwords"
+      :filtered-passwords="filteredPasswords"
+      @close="closeExportModal"
+      @export-success="loadPasswords"
+    />
   </div>
 </template>
 
@@ -160,6 +176,8 @@
 import { computed, onMounted, ref } from 'vue'
 import PasswordCard from './PasswordCard.vue'
 import PasswordModal from './PasswordModal.vue'
+import ImportModal from './ImportModal.vue'
+import ExportModal from './ExportModal.vue'
 import Icon from './Icon.vue'
 
 // 定义密码接口
@@ -187,23 +205,26 @@ const showModal = ref(false)
 const editingPassword = ref<Password | null>(null)
 const isSidebarHidden = ref(false)
 
+// 导入导出相关状态
+const showImportModal = ref(false)
+const showExportModal = ref(false)
+
 // 计算属性
 const filteredPasswords = computed(() => {
   let filtered = passwords.value
 
   // 按类别过滤
   if (activeCategory.value === 'favorite') {
-    filtered = filtered.filter(p => p.isFavorited)
+    filtered = filtered.filter((p) => p.isFavorited)
   } else if (activeCategory.value !== 'all') {
-    filtered = filtered.filter(p => p.category === activeCategory.value)
+    filtered = filtered.filter((p) => p.category === activeCategory.value)
   }
 
   // 搜索过滤
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(p =>
-      p.service.toLowerCase().includes(query) ||
-      p.username.toLowerCase().includes(query)
+    filtered = filtered.filter(
+      (p) => p.service.toLowerCase().includes(query) || p.username.toLowerCase().includes(query)
     )
   }
 
@@ -213,7 +234,7 @@ const filteredPasswords = computed(() => {
 const listTitle = computed(() => {
   if (activeCategory.value === 'all') return `所有密码 (${filteredPasswords.value.length})`
   if (activeCategory.value === 'favorite') return `收藏夹 (${filteredPasswords.value.length})`
-  const category = categories.find(c => c.id === activeCategory.value)
+  const category = categories.find((c) => c.id === activeCategory.value)
   return `${category?.name} (${filteredPasswords.value.length})`
 })
 
@@ -330,16 +351,22 @@ const toggleSidebar = (): void => {
   isSidebarHidden.value = !isSidebarHidden.value
 }
 
-// 打开导入模态框
+// 导入导出功能
 const openImportModal = (): void => {
-  console.log('Opening import modal...')
+  showImportModal.value = true
 }
 
-// 打开导出模态框
+const closeImportModal = (): void => {
+  showImportModal.value = false
+}
+
 const openExportModal = (): void => {
-  console.log('Opening export modal...')
+  showExportModal.value = true
 }
 
+const closeExportModal = (): void => {
+  showExportModal.value = false
+}
 </script>
 
 <style scoped>
@@ -379,6 +406,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 /* 头部样式 */
@@ -406,7 +434,8 @@ body {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) rotate(0deg);
   }
   33% {
@@ -502,6 +531,8 @@ body {
   padding: 25px;
   background: white;
   border-bottom: 1px solid var(--border);
+  z-index: 10;
+  position: relative;
 }
 
 .search-box {
@@ -509,6 +540,7 @@ body {
   background: var(--light);
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
 }
 
 .search-box input {
@@ -517,6 +549,8 @@ body {
   padding: 12px 15px;
   background: transparent;
   font-size: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 .search-box input:focus {
@@ -529,6 +563,8 @@ body {
   border: none;
   padding: 0 20px;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 /* 主内容区 */
@@ -654,6 +690,177 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 模态窗口样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay.visible {
+  display: flex;
+}
+
+/* 修复密码模态框显示问题 */
+.password-modal {
+  z-index: 1001;
+}
+
+/* 修复 PasswordModal 组件样式冲突 */
+.password-modal .modal-overlay {
+  display: flex;
+  z-index: 1001;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--gray);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--dark);
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--dark);
+  background: white;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+
+.file-drop {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+  margin-bottom: 20px;
+  background-color: var(--light);
+}
+
+.file-drop:hover,
+.file-drop.drag-over {
+  border-color: var(--primary);
+  background-color: rgba(67, 97, 238, 0.05);
+}
+
+.file-drop i,
+.file-drop svg {
+  font-size: 32px;
+  color: var(--gray);
+  margin-bottom: 10px;
+}
+
+.file-drop p {
+  color: var(--gray);
+  margin-bottom: 5px;
+}
+
+.file-drop .file-types {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.modal-btn.primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+}
+
+.modal-btn.primary:hover {
+  background: var(--secondary);
+}
+
+.modal-btn.secondary {
+  background: var(--light);
+  color: #4b5563;
+  border: 1px solid var(--border);
+}
+
+.modal-btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.modal-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* 中等屏幕设备适配 (900px-1200px) */
