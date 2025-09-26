@@ -78,7 +78,8 @@ const iconMap: Record<string, string> = {
   user: '/src/assets/icons/user.svg',
   x: '/src/assets/icons/x.svg',
   'file-import': '/src/assets/icons/file-import.svg',
-  'file-export': '/src/assets/icons/file-export.svg'
+  'file-export': '/src/assets/icons/file-export.svg',
+  'cloud-upload': '/src/assets/icons/cloud-upload.svg'
 }
 
 const loadIcon = async (): Promise<void> => {

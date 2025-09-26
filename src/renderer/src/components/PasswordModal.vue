@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-overlay" v-if="visible" @click.self="closeModal">
+  <div v-if="visible" class="password-modal-overlay" @click.self="closeModal">
     <div class="password-modal card">
       <div class="modal-header">
         <h2>{{ isEditing ? '编辑密码' : '添加新密码' }}</h2>
-        <button class="close-btn" @click="closeModal" type="button">
+        <button class="close-btn" type="button" @click="closeModal">
           <Icon name="x" :width="24" :height="24" />
         </button>
       </div>
@@ -12,39 +12,39 @@
         <div class="form-group">
           <label for="title">服务名称</label>
           <input
-            type="text"
             id="title"
             v-model="formData.title"
+            type="text"
             placeholder="例如：Google、Facebook"
             required
-          >
+          />
         </div>
 
         <div class="form-group">
           <label for="username">用户名/邮箱</label>
           <input
-            type="text"
             id="username"
             v-model="formData.username"
+            type="text"
             placeholder="输入用户名或邮箱"
             required
-          >
+          />
         </div>
 
         <div class="form-group">
           <label for="password">密码</label>
           <div class="password-input-group">
             <input
-              :type="showPassword ? 'text' : 'password'"
               id="password"
               v-model="formData.password"
+              :type="showPassword ? 'text' : 'password'"
               placeholder="输入密码"
               required
-            >
-            <button class="toggle-password" @click="showPassword = !showPassword" type="button">
+            />
+            <button class="toggle-password" type="button" @click="showPassword = !showPassword">
               <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
             </button>
-            <button class="generate-password" @click="generatePassword" type="button">
+            <button class="generate-password" type="button" @click="generatePassword">
               <Icon name="dice" :width="24" :height="24" />
             </button>
           </div>
@@ -52,20 +52,12 @@
 
         <div class="form-group">
           <label for="url">网站地址 (可选)</label>
-          <input
-            type="url"
-            id="url"
-            v-model="formData.url"
-            placeholder="https://"
-          >
+          <input id="url" v-model="formData.url" type="url" placeholder="https://" />
         </div>
 
         <div class="form-group">
           <label for="category">分类</label>
-          <select
-            id="category"
-            v-model="formData.category"
-          >
+          <select id="category" v-model="formData.category">
             <option value="">请选择分类</option>
             <option
               v-for="category in predefinedCategories"
@@ -81,7 +73,12 @@
           <span>密码强度: </span>
           <div class="strength-indicator" :class="'strength-' + passwordStrength">
             <div class="strength-dots">
-              <div v-for="i in 4" :key="i" class="dot" :class="{ active: isStrengthDotActive(i) }"></div>
+              <div
+                v-for="i in 4"
+                :key="i"
+                class="dot"
+                :class="{ active: isStrengthDotActive(i) }"
+              ></div>
             </div>
             <span>{{ strengthText }}</span>
           </div>
@@ -89,8 +86,10 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="closeModal" type="button">取消</button>
-        <button class="btn btn-primary" @click="savePassword" type="button">{{ isEditing ? '更新' : '保存' }}</button>
+        <button class="btn btn-secondary" type="button" @click="closeModal">取消</button>
+        <button class="btn btn-primary" type="button" @click="savePassword">
+          {{ isEditing ? '更新' : '保存' }}
+        </button>
       </div>
     </div>
   </div>
@@ -162,9 +161,9 @@ export default defineComponent({
     },
     strengthText() {
       const strengthMap = {
-        'weak': '弱',
-        'medium': '中',
-        'strong': '强'
+        weak: '弱',
+        medium: '中',
+        strong: '强'
       }
       return strengthMap[this.passwordStrength]
     }
@@ -175,11 +174,11 @@ export default defineComponent({
         if (newVal) {
           // 每次打开表单时，将密码可见性设置为隐藏状态（默认关闭）
           this.showPassword = false
-          
+
           if (this.isEditing && this.password) {
             // 编辑模式：填充表单数据
             let password = this.password.password || ''
-            
+
             // 如果是加密密码，则解密
             if (password && password.startsWith('{')) {
               try {
@@ -189,7 +188,7 @@ export default defineComponent({
                 password = '解密失败'
               }
             }
-            
+
             this.formData = {
               title: this.password.service || '',
               username: this.password.username || '',
@@ -252,7 +251,8 @@ export default defineComponent({
       }
     },
     generatePassword() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
+      const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
       let password = ''
       for (let i = 0; i < 16; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length))
@@ -270,19 +270,19 @@ export default defineComponent({
     },
     setIconAndColor() {
       const categoryIcons = {
-        'website': 'globe',
-        'payment': 'credit-card',
-        'wifi': 'network',
-        'app': 'mobile',
-        'other': 'key'
+        website: 'globe',
+        payment: 'credit-card',
+        wifi: 'network',
+        app: 'mobile',
+        other: 'key'
       }
 
       const categoryColors = {
-        'website': '#4361ee',
-        'payment': '#f72585',
-        'wifi': '#4cc9f0',
-        'app': '#3f37c9',
-        'other': '#6c757d'
+        website: '#4361ee',
+        payment: '#f72585',
+        wifi: '#4cc9f0',
+        app: '#3f37c9',
+        other: '#6c757d'
       }
 
       this.formData.icon = categoryIcons[this.formData.category] || 'key'
@@ -298,7 +298,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.modal-overlay {
+.password-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
