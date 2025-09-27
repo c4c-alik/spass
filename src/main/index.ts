@@ -144,6 +144,139 @@ ipcMain.handle('get-passwords', async () => {
   return await memoryDb.getAllPasswords()
 })
 
+// 添加KDBX导出处理
+ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
+  try {
+    const kdbxweb = await import('kdbxweb')
+    const argon2 = await import('argon2')
+
+    // 设置Argon2实现
+    kdbxweb.CryptoEngine.setArgon2Impl(
+      (password, salt, memory, iterations, length, parallelism, type) => {
+        // 将密码和盐值转换为Buffer
+        const passwordBuffer = kdbxweb.ByteUtils.arrayToBuffer(
+          typeof password === 'string' ? kdbxweb.ByteUtils.stringToBytes(password) : password
+        )
+        const saltBuffer = kdbxweb.ByteUtils.arrayToBuffer(
+          typeof salt === 'string' ? kdbxweb.ByteUtils.stringToBytes(salt) : salt
+        )
+
+        // 调用argon2.hash进行哈希计算
+        return argon2
+          .hash({
+            pass: passwordBuffer,
+            salt: saltBuffer,
+            time: iterations,
+            mem: memory,
+            parallelism: parallelism,
+            type: type,
+            hashLen: length
+          })
+          .then((result: any) => {
+            // 返回Uint8Array格式结果
+            return kdbxweb.ByteUtils.arrayToBuffer(result.hash)
+          })
+      }
+    )
+
+    // 创建新的KDBX数据库
+    const credentials = new kdbxweb.KdbxCredentials(
+      kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(masterPassword || 'spass'))
+    )
+    const db = kdbxweb.Kdbx.create(credentials, 'SPass')
+
+    // 创建密码条目
+    passwords.forEach((password: any) => {
+      const entry = db.createEntry(db.getDefaultGroup())
+      entry.fields.Title = password.service
+      entry.fields.UserName = password.username
+      entry.fields.Password = kdbxweb.ProtectedValue.fromBinary(
+        kdbxweb.ByteUtils.stringToBytes(password.password)
+      )
+      if (password.url) {
+        entry.fields.URL = password.url
+      }
+      if (password.notes) {
+        entry.fields.Notes = password.notes
+      }
+      // 添加自定义字段
+      entry.fields.Category = password.category || 'other'
+    })
+
+    // 保存数据库
+    return await db.save()
+  } catch (error) {
+    console.error('KDBX导出失败:', error)
+    throw error
+  }
+})
+
+// 添加KDBX导入处理
+ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
+  try {
+    const kdbxweb = await import('kdbxweb')
+    const argon2 = await import('argon2')
+
+    // 设置Argon2实现
+    kdbxweb.CryptoEngine.setArgon2Impl(
+      (password, salt, memory, iterations, length, parallelism, type) => {
+        // 将密码和盐值转换为Buffer
+        const passwordBuffer = kdbxweb.ByteUtils.arrayToBuffer(
+          typeof password === 'string' ? kdbxweb.ByteUtils.stringToBytes(password) : password
+        )
+        const saltBuffer = kdbxweb.ByteUtils.arrayToBuffer(
+          typeof salt === 'string' ? kdbxweb.ByteUtils.stringToBytes(salt) : salt
+        )
+
+        // 调用argon2.hash进行哈希计算
+        return argon2
+          .hash({
+            pass: passwordBuffer,
+            salt: saltBuffer,
+            time: iterations,
+            mem: memory,
+            parallelism: parallelism,
+            type: type,
+            hashLen: length
+          })
+          .then((result: any) => {
+            // 返回Uint8Array格式结果
+            return kdbxweb.ByteUtils.arrayToBuffer(result.hash)
+          })
+      }
+    )
+
+    // 加载KDBX数据库
+    const credentials = new kdbxweb.KdbxCredentials(
+      kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(masterPassword))
+    )
+
+    const db = await kdbxweb.Kdbx.load(new Uint8Array(fileData), credentials)
+
+    // 提取密码条目
+    const passwords: any[] = []
+    db.groups.forEach((group) => {
+      group.entries.forEach((entry) => {
+        passwords.push({
+          service: entry.fields.Title || '',
+          username: entry.fields.UserName || '',
+          password: entry.fields.Password
+            ? kdbxweb.ByteUtils.bytesToString(entry.fields.Password.getBinary())
+            : '',
+          url: entry.fields.URL || '',
+          notes: entry.fields.Notes || '',
+          category: entry.fields.Category || 'other'
+        })
+      })
+    })
+
+    return passwords
+  } catch (error) {
+    console.error('KDBX导入失败:', error)
+    throw error
+  }
+})
+
 ipcMain.handle('add-password', async (_event, passwordData) => {
   // 重置自动锁定定时器
   setupAutoLock()
