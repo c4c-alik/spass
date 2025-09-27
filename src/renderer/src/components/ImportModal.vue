@@ -16,15 +16,7 @@
         >
           <Icon name="cloud-upload" :width="32" :height="32" />
           <p>拖放文件到此处或点击上传</p>
-          <div class="file-types">支持格式: CSV, JSON</div>
-        </div>
-
-        <div class="form-group">
-          <label for="importFormat">选择格式</label>
-          <select id="importFormat" v-model="importFormat">
-            <option value="json">JSON (SPass格式)</option>
-            <option value="csv">CSV (通用格式)</option>
-          </select>
+          <div class="file-types">支持格式: KDBX</div>
         </div>
 
         <div class="form-group">
@@ -48,7 +40,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import Icon from './Icon.vue'
-import { importData } from '../utils/data-import-export'
 
 const props = defineProps<{
   visible: boolean
@@ -61,7 +52,6 @@ const emit = defineEmits<{
 
 // 导入相关状态
 const selectedFile = ref<File | null>(null)
-const importFormat = ref('json')
 const importStrategy = ref('merge')
 const isDragOver = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -73,7 +63,6 @@ watch(
     if (!newVal) {
       // 模态框关闭时重置状态
       selectedFile.value = null
-      importFormat.value = 'json'
       importStrategy.value = 'merge'
     }
   }
@@ -87,7 +76,7 @@ const triggerFileSelect = () => {
   // 创建临时的文件输入元素
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = '.json,.csv'
+  input.accept = '.kdbx'
   input.style.display = 'none'
   input.onchange = (event) => {
     const target = event.target as HTMLInputElement
@@ -129,10 +118,16 @@ const startImport = async () => {
   }
 
   try {
-    await importData(selectedFile.value, importFormat.value, importStrategy.value)
+    // TODO: 实现KDBX格式导入逻辑
+    // 这里需要集成kdbxweb库来处理KDBX格式导入
+    console.log('导入KDBX文件:', selectedFile.value)
+    console.log('导入策略:', importStrategy.value)
+    
+    // 模拟导入过程
+    alert('KDBX格式导入功能待实现')
+    
     closeModal()
     emit('import-success')
-    alert('导入成功!')
   } catch (error) {
     console.error('导入失败:', error)
     alert('导入失败: ' + (error as Error).message)
