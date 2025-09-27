@@ -74,16 +74,33 @@ const startExport = async () => {
       passwordsToExport = props.filteredPasswords
     }
 
-    // TODO: 实现KDBX格式导出逻辑
-    // 这里需要集成kdbxweb库来处理KDBX格式导出
-    console.log('导出密码到KDBX格式:', passwordsToExport)
-    console.log('导出密码:', exportPassword.value)
+    // 将密码数据转换为可序列化的格式
+    const serializablePasswords = passwordsToExport.map((password) => ({
+      service: password.service,
+      username: password.username,
+      password: password.password,
+      url: password.url || '',
+      notes: password.notes || '',
+      category: password.category || 'other'
+    }))
 
-    // 模拟导出过程
-    alert('KDBX格式导出功能待实现')
+    // 通过主进程创建KDBX数据库
+    const kdbx = await window.api.password.exportToKdbx(serializablePasswords, exportPassword.value)
+
+    // 创建并下载文件
+    const blob = new Blob([kdbx], { type: 'application/x-kdbx' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `spass-export-${new Date().toISOString().slice(0, 10)}.kdbx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 
     closeModal()
     emit('export-success')
+    alert('导出成功!')
   } catch (error) {
     console.error('导出失败:', error)
     alert('导出失败: ' + (error as Error).message)

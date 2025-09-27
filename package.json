@@ -26,6 +26,7 @@
     "argon2": "^0.44.0",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.3.9",
+    "kdbxweb": "^2.1.1",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

@@ -26,6 +26,16 @@
             <option value="replace">替换 - 删除所有现有项目后导入</option>
           </select>
         </div>
+
+        <div class="form-group">
+          <label for="importPassword">数据库密码</label>
+          <input
+            id="importPassword"
+            v-model="importPassword"
+            type="password"
+            placeholder="请输入KDBX数据库密码"
+          />
+        </div>
       </div>
       <div class="modal-footer">
         <button class="modal-btn secondary" @click="closeModal">取消</button>
@@ -53,6 +63,7 @@ const emit = defineEmits<{
 // 导入相关状态
 const selectedFile = ref<File | null>(null)
 const importStrategy = ref('merge')
+const importPassword = ref('')
 const isDragOver = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -64,6 +75,7 @@ watch(
       // 模态框关闭时重置状态
       selectedFile.value = null
       importStrategy.value = 'merge'
+      importPassword.value = ''
     }
   }
 )
@@ -118,20 +130,37 @@ const startImport = async () => {
   }
 
   try {
-    // TODO: 实现KDBX格式导入逻辑
-    // 这里需要集成kdbxweb库来处理KDBX格式导入
-    console.log('导入KDBX文件:', selectedFile.value)
+    // 读取文件内容
+    const arrayBuffer = await readFileContent(selectedFile.value)
+
+    // 通过主进程解析KDBX文件
+    const importedPasswords = await window.api.password.importFromKdbx(
+      arrayBuffer,
+      importPassword.value
+    )
+
+    // TODO: 实际的导入逻辑需要根据项目需求实现
+    // 这里只是将解析出的数据打印到控制台
+    console.log('导入的密码数据:', importedPasswords)
     console.log('导入策略:', importStrategy.value)
-    
-    // 模拟导入过程
-    alert('KDBX格式导入功能待实现')
-    
+
     closeModal()
     emit('import-success')
+    alert(`成功导入 ${importedPasswords.length} 条密码记录!`)
   } catch (error) {
     console.error('导入失败:', error)
     alert('导入失败: ' + (error as Error).message)
   }
+}
+
+// 读取文件内容
+const readFileContent = (file: File): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target?.result as ArrayBuffer)
+    reader.onerror = (e) => reject(new Error('读取文件失败'))
+    reader.readAsArrayBuffer(file)
+  })
 }
 </script>
 
