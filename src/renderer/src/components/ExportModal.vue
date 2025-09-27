@@ -7,14 +7,6 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="exportFormat">选择格式</label>
-          <select id="exportFormat" v-model="exportFormat">
-            <option value="json">JSON (SPass格式)</option>
-            <option value="csv">CSV (通用格式)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label for="exportScope">导出范围</label>
           <select id="exportScope" v-model="exportScope">
             <option value="all">所有密码</option>
@@ -42,7 +34,6 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { exportData } from '../utils/data-import-export'
 
 const props = defineProps<{
   visible: boolean
@@ -56,7 +47,6 @@ const emit = defineEmits<{
 }>()
 
 // 导出相关状态
-const exportFormat = ref('json')
 const exportScope = ref('all')
 const exportPassword = ref('')
 
@@ -66,7 +56,6 @@ watch(
   (newVal) => {
     if (!newVal) {
       // 模态框关闭时重置状态
-      exportFormat.value = 'json'
       exportScope.value = 'all'
       exportPassword.value = ''
     }
@@ -85,25 +74,16 @@ const startExport = async () => {
       passwordsToExport = props.filteredPasswords
     }
 
-    // 导出数据
-    const data = await exportData(exportFormat.value, passwordsToExport, exportPassword.value)
+    // TODO: 实现KDBX格式导出逻辑
+    // 这里需要集成kdbxweb库来处理KDBX格式导出
+    console.log('导出密码到KDBX格式:', passwordsToExport)
+    console.log('导出密码:', exportPassword.value)
 
-    // 创建并下载文件
-    const mimeType = exportFormat.value === 'csv' ? 'text/csv' : 'application/json'
-    const extension = exportFormat.value === 'csv' ? 'csv' : 'json'
-    const blob = new Blob([data], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `spass-export-${new Date().toISOString().slice(0, 10)}.${extension}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    // 模拟导出过程
+    alert('KDBX格式导出功能待实现')
 
     closeModal()
     emit('export-success')
-    alert('导出成功!')
   } catch (error) {
     console.error('导出失败:', error)
     alert('导出失败: ' + (error as Error).message)
