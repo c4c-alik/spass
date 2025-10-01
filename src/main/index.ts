@@ -86,11 +86,21 @@ app.on('window-all-closed', () => {
 })
 
 // 应用退出前关闭数据库连接
-app.on('before-quit', async () => {
-  // 在退出前保存内存数据库到加密文件
-  await saveMemoryDbToEncryptedFile()
-  await userDb.close()
-  await memoryDb.close()
+app.on('before-quit', async (event) => {
+  // 阻止默认的退出行为，直到我们完成数据保存
+  event.preventDefault()
+
+  try {
+    // 在退出前保存内存数据库到加密文件
+    await saveMemoryDbToEncryptedFile()
+    await userDb.close()
+    await memoryDb.close()
+  } catch (error) {
+    console.error('Error during app quit:', error)
+  } finally {
+    // 强制退出应用
+    app.exit(0)
+  }
 })
 
 // 保存内存数据库到加密文件
@@ -98,7 +108,7 @@ async function saveMemoryDbToEncryptedFile(): Promise<void> {
   if (encryptionManager.isUnlocked()) {
     try {
       const dbBuffer = await memoryDb.exportToBuffer()
-      console.log(dbBuffer)
+      // console.log(dbBuffer)
       await encryptionManager.saveEncryptedDatabase(dbBuffer)
     } catch (error) {
       console.error('Failed to save encrypted database:', error)
