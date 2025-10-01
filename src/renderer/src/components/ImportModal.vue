@@ -353,3 +353,4 @@ const readFileContent = (file: File): Promise<ArrayBuffer> => {
   opacity: 0.6;
   cursor: not-allowed;
 }
+</style>
