@@ -84,6 +84,8 @@ const startExport = async () => {
       category: password.category || 'other'
     }))
 
+
+    console.log('导出密码数据:', serializablePasswords)
     // 通过主进程创建KDBX数据库
     const kdbx = await window.api.password.exportToKdbx(serializablePasswords, exportPassword.value)
 

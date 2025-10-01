@@ -265,19 +265,19 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
       try {
         console.log(`Creating entry ${index}:`, password.service)
         const entry = db.createEntry(db.getDefaultGroup())
-        entry.fields.Title = password.service
-        entry.fields.UserName = password.username
-        entry.fields.Password = kdbxweb.ProtectedValue.fromBinary(
+        entry.fields.set('Title', password.service)
+        entry.fields.set('UserName', password.username)
+        entry.fields.set('Password', kdbxweb.ProtectedValue.fromBinary(
           kdbxweb.ByteUtils.stringToBytes(password.password)
-        )
+        ))
         if (password.url) {
-          entry.fields.URL = password.url
+          entry.fields.set('URL', password.url)
         }
         if (password.notes) {
-          entry.fields.Notes = password.notes
+          entry.fields.set('Notes', password.notes)
         }
         // 添加自定义字段
-        entry.fields.Category = password.category || 'other'
+        entry.fields.set('Category', password.category || 'other')
         console.log(`Entry ${index} created successfully`)
       } catch (entryError) {
         console.error(`Error creating entry ${index}:`, entryError)
@@ -428,16 +428,18 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
     // 提取密码条目
     const passwords: any[] = []
     db.groups.forEach((group) => {
+      console.log('Processing group:', group)
       group.entries.forEach((entry) => {
+        console.log('Processing entry:', entry.fields)
         passwords.push({
-          service: entry.fields.Title || '',
-          username: entry.fields.UserName || '',
-          password: entry.fields.Password
-            ? kdbxweb.ByteUtils.bytesToString(entry.fields.Password.getBinary())
+          service: entry.fields.get('Title') || '',
+          username: entry.fields.get('UserName') || '',
+          password: entry.fields.get('Password')
+            ? kdbxweb.ByteUtils.bytesToString(entry.fields.get('Password').getBinary())
             : '',
-          url: entry.fields.URL || '',
-          notes: entry.fields.Notes || '',
-          category: entry.fields.Category || 'other'
+          url: entry.fields.get('URL') || '',
+          notes: entry.fields.get('Notes') || '',
+          category: entry.fields.get('Category') || 'other'
         })
       })
     })
