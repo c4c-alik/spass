@@ -139,14 +139,54 @@ const startImport = async () => {
       importPassword.value
     )
 
-    // TODO: 实际的导入逻辑需要根据项目需求实现
-    // 这里只是将解析出的数据打印到控制台
+    // 根据导入策略处理密码数据
     console.log('导入的密码数据:', importedPasswords)
     console.log('导入策略:', importStrategy.value)
 
+    // 如果策略是替换，则先清空现有数据
+    if (importStrategy.value === 'replace') {
+      // 获取当前所有密码
+      const currentPasswords = await window.api.password.getAllPasswords()
+      // 删除所有现有密码
+      for (const password of currentPasswords) {
+        await window.api.password.deletePassword(password.id)
+      }
+    }
+
+    // 添加导入的密码到数据库
+    let importedCount = 0
+    for (const password of importedPasswords) {
+      try {
+        // 检查密码是否是加密格式，如果是则需要解密
+        let decryptedPassword = password.password
+        try {
+          // 尝试解析密码是否为加密格式
+          const encryptedData = JSON.parse(password.password)
+          if (encryptedData.encrypted && encryptedData.iv && encryptedData.authTag) {
+            // 如果是加密格式，请求主进程解密
+            decryptedPassword = await window.api.password.decryptPassword(password.password)
+          }
+        } catch (e) {
+          // 如果解析失败，说明密码是明文格式，不需要解密
+          console.log('密码为明文格式，无需解密')
+        }
+
+        // 使用解密后的密码创建新对象
+        const passwordToAdd = {
+          ...password,
+          password: decryptedPassword
+        }
+
+        await window.api.password.addPassword(passwordToAdd)
+        importedCount++
+      } catch (addError) {
+        console.error('添加密码失败:', addError)
+      }
+    }
+
     closeModal()
     emit('import-success')
-    alert(`成功导入 ${importedPasswords.length} 条密码记录!`)
+    alert(`成功导入 ${importedCount} 条密码记录!`)
   } catch (error) {
     console.error('导入失败:', error)
     alert('导入失败: ' + (error as Error).message)
