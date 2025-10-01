@@ -9,14 +9,14 @@
         <span>SPass</span>
       </div>
       <div class="actions">
-        <button class="btn sync-btn" type="button" @click="syncPasswords">
-          <Icon name="sync" :width="24" :height="24" />
-          <span>同步</span>
-        </button>
-        <button class="btn" type="button" @click="openSettings">
-          <Icon name="cog" :width="24" :height="24" />
-          <span>设置</span>
-        </button>
+<!--        <button class="btn sync-btn" type="button" @click="syncPasswords">-->
+<!--          <Icon name="sync" :width="24" :height="24" />-->
+<!--          <span>同步</span>-->
+<!--        </button>-->
+<!--        <button class="btn" type="button" @click="openSettings">-->
+<!--          <Icon name="cog" :width="24" :height="24" />-->
+<!--          <span>设置</span>-->
+<!--        </button>-->
         <!-- 导入导出按钮 -->
         <button class="btn" type="button" @click="openImportModal">
           <Icon name="file-import" :width="24" :height="24" />
