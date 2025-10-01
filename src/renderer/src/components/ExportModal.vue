@@ -100,10 +100,9 @@ const startExport = async () => {
 
     closeModal()
     emit('export-success')
-    alert('导出成功!')
   } catch (error) {
     console.error('导出失败:', error)
-    alert('导出失败: ' + (error as Error).message)
+    // 错误信息将仅在控制台中显示
   }
 }
 </script>
