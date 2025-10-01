@@ -116,8 +116,7 @@ function setupAutoLock(): void {
   // 设置30分钟无操作自动锁定
   autoLockTimeout = setTimeout(
     async () => {
-      // 保存数据到加密文件
-      await saveMemoryDbToEncryptedFile()
+      // 不再自动锁定时保存数据到加密文件
 
       // 清除内存数据库
       await memoryDb.close()
@@ -147,31 +146,16 @@ ipcMain.handle('get-passwords', async () => {
 // 添加KDBX导出处理
 ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
   try {
-    console.log('Starting KDBX export process')
     const kdbxwebModule = await import('kdbxweb')
-    console.log('kdbxweb module loaded:', kdbxwebModule)
-    console.log('kdbxwebModule.default:', kdbxwebModule.default)
-
     // 根据实际导入结构调整访问方式
     const kdbxweb = kdbxwebModule.default || kdbxwebModule
-    console.log('kdbxweb object:', kdbxweb)
 
     const argon2Module = await import('argon2')
     const argon2 = argon2Module.default || argon2Module
-    console.log('argon2 module loaded:', argon2)
-    console.log('aaaa')
 
     // 设置Argon2实现
-    console.log('Setting Argon2 implementation')
     kdbxweb.CryptoEngine.setArgon2Impl(
       async (password, salt, memory, iterations, length, parallelism, type) => {
-        console.log('Argon2 implementation called with params:', {
-          memory,
-          iterations,
-          length,
-          parallelism,
-          type
-        })
         try {
           // 确保参数是正确的类型
           let passwordBuffer: Buffer | string
@@ -198,9 +182,6 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
             saltBuffer = Buffer.from(String(salt), 'utf-8')
           }
 
-          console.log('Password buffer created, type:', typeof passwordBuffer)
-          console.log('Salt buffer created, type:', typeof saltBuffer)
-
           // 调用argon2.hash进行哈希计算，使用正确的参数格式
           const result = await argon2.hash(passwordBuffer, {
             salt: saltBuffer,
@@ -211,7 +192,6 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
             type: type
           })
 
-          console.log('Argon2 hash completed')
           // 返回Uint8Array格式结果
           if (typeof result === 'string') {
             // 如果结果是字符串，需要解码
@@ -237,10 +217,6 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     )
 
     // 创建新的KDBX数据库
-    console.log('Creating KDBX credentials')
-    console.log('kdbxweb.KdbxCredentials:', kdbxweb.KdbxCredentials)
-    console.log('kdbxweb.ProtectedValue:', kdbxweb.ProtectedValue)
-
     if (!kdbxweb.ProtectedValue) {
       console.error('kdbxweb.ProtectedValue is undefined')
       throw new Error('kdbxweb.ProtectedValue is undefined')
@@ -254,22 +230,19 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     const credentials = new kdbxweb.KdbxCredentials(
       kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(masterPassword || 'spass'))
     )
-    console.log('KDBX credentials created successfully')
 
     const db = kdbxweb.Kdbx.create(credentials, 'SPass')
-    console.log('KDBX database created')
 
     // 创建密码条目
-    console.log('Creating password entries, count:', passwords.length)
     passwords.forEach((password: any, index) => {
       try {
-        console.log(`Creating entry ${index}:`, password.service)
         const entry = db.createEntry(db.getDefaultGroup())
         entry.fields.set('Title', password.service)
         entry.fields.set('UserName', password.username)
-        entry.fields.set('Password', kdbxweb.ProtectedValue.fromBinary(
-          kdbxweb.ByteUtils.stringToBytes(password.password)
-        ))
+        entry.fields.set(
+          'Password',
+          kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(password.password))
+        )
         if (password.url) {
           entry.fields.set('URL', password.url)
         }
@@ -278,7 +251,6 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
         }
         // 添加自定义字段
         entry.fields.set('Category', password.category || 'other')
-        console.log(`Entry ${index} created successfully`)
       } catch (entryError) {
         console.error(`Error creating entry ${index}:`, entryError)
         throw entryError
@@ -286,9 +258,7 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     })
 
     // 保存数据库
-    console.log('Saving KDBX database')
     const result = await db.save()
-    console.log('KDBX database saved successfully')
     return result
   } catch (error) {
     console.error('KDBX导出失败:', error)
@@ -300,30 +270,16 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
 // 添加KDBX导入处理
 ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
   try {
-    console.log('Starting KDBX import process')
     const kdbxwebModule = await import('kdbxweb')
-    console.log('kdbxweb module loaded:', kdbxwebModule)
-    console.log('kdbxwebModule.default:', kdbxwebModule.default)
-
     // 根据实际导入结构调整访问方式
     const kdbxweb = kdbxwebModule.default || kdbxwebModule
-    console.log('kdbxweb object:', kdbxweb)
 
     const argon2Module = await import('argon2')
     const argon2 = argon2Module.default || argon2Module
-    console.log('argon2 module loaded:', argon2)
 
     // 设置Argon2实现
-    console.log('Setting Argon2 implementation for import')
     kdbxweb.CryptoEngine.setArgon2Impl(
       async (password, salt, memory, iterations, length, parallelism, type) => {
-        console.log('Argon2 implementation called with params:', {
-          memory,
-          iterations,
-          length,
-          parallelism,
-          type
-        })
         try {
           // 确保参数是正确的类型
           let passwordBuffer: Buffer | string
@@ -350,9 +306,6 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
             saltBuffer = Buffer.from(String(salt), 'utf-8')
           }
 
-          console.log('Password buffer created, type:', typeof passwordBuffer)
-          console.log('Salt buffer created, type:', typeof saltBuffer)
-
           // 调用argon2.hash进行哈希计算，使用正确的参数格式
           const result = await argon2.hash(passwordBuffer, {
             salt: saltBuffer,
@@ -363,7 +316,6 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
             type: type
           })
 
-          console.log('Argon2 hash completed')
           // 返回Uint8Array格式结果
           if (typeof result === 'string') {
             // 如果结果是字符串，需要解码
@@ -389,10 +341,6 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
     )
 
     // 加载KDBX数据库
-    console.log('Creating KDBX credentials for import')
-    console.log('kdbxweb.KdbxCredentials:', kdbxweb.KdbxCredentials)
-    console.log('kdbxweb.ProtectedValue:', kdbxweb.ProtectedValue)
-
     if (!kdbxweb.ProtectedValue) {
       console.error('kdbxweb.ProtectedValue is undefined')
       throw new Error('kdbxweb.ProtectedValue is undefined')
@@ -406,7 +354,6 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
     const credentials = new kdbxweb.KdbxCredentials(
       kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(masterPassword))
     )
-    console.log('KDBX credentials created successfully')
 
     // 确保 fileData 是 ArrayBuffer 类型
     let arrayBuffer: ArrayBuffer
@@ -423,14 +370,11 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
     }
 
     const db = await kdbxweb.Kdbx.load(arrayBuffer, credentials)
-    console.log('KDBX database loaded')
 
     // 提取密码条目
     const passwords: any[] = []
     db.groups.forEach((group) => {
-      console.log('Processing group:', group)
       group.entries.forEach((entry) => {
-        console.log('Processing entry:', entry.fields)
         passwords.push({
           service: entry.fields.get('Title') || '',
           username: entry.fields.get('UserName') || '',
@@ -444,7 +388,6 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
       })
     })
 
-    console.log('Imported passwords count:', passwords.length)
     return passwords
   } catch (error) {
     console.error('KDBX导入失败:', error)
@@ -469,8 +412,7 @@ ipcMain.handle('add-password', async (_event, passwordData) => {
 
   const result = await memoryDb.addPassword(encryptedPasswordData)
 
-  // 保存到加密文件
-  await saveMemoryDbToEncryptedFile()
+  // 不再每次操作后保存到加密文件
 
   return result
 })
@@ -485,8 +427,7 @@ ipcMain.handle('delete-password', async (_event, id) => {
 
   const result = await memoryDb.deletePassword(id)
 
-  // 保存到加密文件
-  await saveMemoryDbToEncryptedFile()
+  // 不再每次操作后保存到加密文件
 
   return result
 })
@@ -509,8 +450,7 @@ ipcMain.handle('update-password', async (_event, arg) => {
 
   const result = await memoryDb.updatePassword(id, encryptedPasswordData)
 
-  // 保存到加密文件
-  await saveMemoryDbToEncryptedFile()
+  // 不再每次操作后保存到加密文件
 
   return result
 })
@@ -567,7 +507,7 @@ ipcMain.handle('user-exists', async (_event, username) => {
 
 // 手动锁定应用
 ipcMain.handle('lock-application', async () => {
-  // 保存数据到加密文件
+  // 保存数据到加密文件（手动锁定时仍然保存）
   await saveMemoryDbToEncryptedFile()
 
   // 清除内存数据库
@@ -617,8 +557,7 @@ ipcMain.handle('toggle-favorite', async (_event, id) => {
 
   const result = await memoryDb.toggleFavorite(id)
 
-  // 保存到加密文件
-  await saveMemoryDbToEncryptedFile()
+  // 不再每次操作后保存到加密文件
 
   return result
 })

@@ -140,8 +140,6 @@ const startImport = async () => {
     )
 
     // 根据导入策略处理密码数据
-    console.log('导入的密码数据:', importedPasswords)
-    console.log('导入策略:', importStrategy.value)
 
     // 如果策略是替换，则先清空现有数据
     if (importStrategy.value === 'replace') {
@@ -168,7 +166,7 @@ const startImport = async () => {
           }
         } catch (e) {
           // 如果解析失败，说明密码是明文格式，不需要解密
-          console.log('密码为明文格式，无需解密')
+
         }
 
         // 使用解密后的密码创建新对象
@@ -355,4 +353,3 @@ const readFileContent = (file: File): Promise<ArrayBuffer> => {
   opacity: 0.6;
   cursor: not-allowed;
 }
-</style>
