@@ -83,7 +83,7 @@ export class MemoryDatabase {
         } else {
           // 检查源表是否有 is_favorited 字段，以确保向后兼容性
           this.db!.get(`
-            SELECT sql FROM temp_db.sqlite_master 
+            SELECT sql FROM temp_db.sqlite_master
             WHERE type='table' AND name='passwords'
           `, (err, row: { sql: string } | undefined) => {
             if (err) {
@@ -91,7 +91,7 @@ export class MemoryDatabase {
             } else {
               // 检查表结构是否包含 is_favorited 字段
               const hasFavoriteColumn = row && row.sql.includes('is_favorited')
-              
+
               if (hasFavoriteColumn) {
                 // 如果源表有 is_favorited 字段，直接复制所有数据
                 this.db!.run(`
@@ -114,9 +114,9 @@ export class MemoryDatabase {
                 // 如果源表没有 is_favorited 字段，手动添加该字段并复制数据
                 // 将旧数据的 is_favorited 字段设置为默认值 0 (未收藏)
                 this.db!.run(`
-                  INSERT INTO passwords 
+                  INSERT INTO passwords
                   (id, service, username, password, url, category, notes, strength, is_favorited, created_at, updated_at)
-                  SELECT id, service, username, password, url, category, notes, strength, 0, created_at, updated_at 
+                  SELECT id, service, username, password, url, category, notes, strength, 0, created_at, updated_at
                   FROM temp_db.passwords
                 `, async (err) => {
                   if (err) {
@@ -180,7 +180,7 @@ export class MemoryDatabase {
             } else {
               // 从内存数据库复制数据到临时数据库
               const exportStmt = tempDb.prepare(`
-                INSERT INTO passwords 
+                INSERT INTO passwords
                 (id, service, username, password, url, category, notes, strength, is_favorited, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               `)
@@ -247,7 +247,7 @@ export class MemoryDatabase {
 
     const all = promisify(this.db.all).bind(this.db)
     const rows: DatabasePasswordEntry[] = await all(`
-      SELECT 
+      SELECT
         id, service, username, password, url, category, notes, strength, is_favorited,
         created_at, updated_at
       FROM passwords
@@ -276,7 +276,7 @@ export class MemoryDatabase {
     // 使用传统回调方式而非promisify，以确保能正确访问this.lastID
     return new Promise((resolve, reject) => {
       this.db!.run(`
-        INSERT INTO passwords 
+        INSERT INTO passwords
         (service, username, password, url, category, notes, strength, is_favorited)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
@@ -373,7 +373,7 @@ export class MemoryDatabase {
 
     const all = promisify(this.db.all).bind(this.db)
     const rows: DatabasePasswordEntry[] = await all(`
-      SELECT 
+      SELECT
         id, service, username, password, url, category, notes, strength, is_favorited,
         created_at, updated_at
       FROM passwords
@@ -403,7 +403,7 @@ export class MemoryDatabase {
     // 先获取当前收藏状态
     const get = promisify(this.db.get).bind(this.db)
     const row: { is_favorited: number } | undefined = await get('SELECT is_favorited FROM passwords WHERE id = ?', [id])
-    
+
     if (!row) {
       throw new Error('Password not found')
     }
