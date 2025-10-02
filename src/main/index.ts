@@ -69,7 +69,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  app.on('activate', function() {
+  app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -167,6 +167,17 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     kdbxweb.CryptoEngine.setArgon2Impl(
       async (password, salt, memory, iterations, length, parallelism, type) => {
         try {
+          console.log(
+            'Argon2 called with parameters:',
+            password,
+            salt,
+            memory,
+            iterations,
+            length,
+            parallelism,
+            type
+          )
+
           // 确保参数是正确的类型
           let passwordBuffer: Buffer | string
           if (typeof password === 'string') {
@@ -193,6 +204,16 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
           }
 
           // 调用argon2.hash进行哈希计算，使用正确的参数格式
+          console.log(
+            'Argon2 called with parameters:',
+            passwordBuffer,
+            saltBuffer,
+            iterations,
+            memory,
+            parallelism,
+            length,
+            type
+          )
           const result = await argon2.hash(passwordBuffer, {
             salt: saltBuffer,
             timeCost: iterations,
@@ -202,8 +223,11 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
             type: type
           })
 
+          console.log('Argon2 result:', result)
+
           // 返回Uint8Array格式结果
           if (typeof result === 'string') {
+            console.log('Argon2 result is string')
             // 如果结果是字符串，需要解码
             const rawResult = await argon2.hash(passwordBuffer, {
               salt: saltBuffer,
@@ -214,8 +238,10 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
               type: type,
               raw: true
             })
+            console.log('Argon2 raw result:', rawResult)
             return new Uint8Array(rawResult)
           } else {
+            console.log('Argon2 result is Buffer')
             // 如果结果是Buffer，直接转换为Uint8Array
             return new Uint8Array(result)
           }
@@ -232,13 +258,14 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
       throw new Error('kdbxweb.ProtectedValue is undefined')
     }
 
-    if (!kdbxweb.ProtectedValue.fromBinary) {
-      console.error('kdbxweb.ProtectedValue.fromBinary is undefined')
-      throw new Error('kdbxweb.ProtectedValue.fromBinary is undefined')
+    if (!kdbxweb.ProtectedValue.fromString) {
+      console.error('kdbxweb.ProtectedValue.fromString is undefined')
+      throw new Error('kdbxweb.ProtectedValue.fromString is undefined')
     }
 
+    console.log('exportPassword', masterPassword)
     const credentials = new kdbxweb.KdbxCredentials(
-      kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(masterPassword || 'spass'))
+      kdbxweb.ProtectedValue.fromString(masterPassword || 'spass')
     )
 
     const db = kdbxweb.Kdbx.create(credentials, 'SPass')
@@ -249,10 +276,7 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
         const entry = db.createEntry(db.getDefaultGroup())
         entry.fields.set('Title', password.service)
         entry.fields.set('UserName', password.username)
-        entry.fields.set(
-          'Password',
-          kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(password.password))
-        )
+        entry.fields.set('Password', kdbxweb.ProtectedValue.fromString(password.password))
         if (password.url) {
           entry.fields.set('URL', password.url)
         }
@@ -291,6 +315,17 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
     kdbxweb.CryptoEngine.setArgon2Impl(
       async (password, salt, memory, iterations, length, parallelism, type) => {
         try {
+          console.log(
+            'Import - Argon2 called with parameters:',
+            password,
+            salt,
+            memory,
+            iterations,
+            length,
+            parallelism,
+            type
+          )
+
           // 确保参数是正确的类型
           let passwordBuffer: Buffer | string
           if (typeof password === 'string') {
@@ -317,6 +352,16 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
           }
 
           // 调用argon2.hash进行哈希计算，使用正确的参数格式
+          console.log(
+            'Import - Argon2 called with parameters:',
+            passwordBuffer,
+            saltBuffer,
+            iterations,
+            memory,
+            parallelism,
+            length,
+            type
+          )
           const result = await argon2.hash(passwordBuffer, {
             salt: saltBuffer,
             timeCost: iterations,
@@ -326,8 +371,11 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
             type: type
           })
 
+          console.log('Import - Argon2 result:', result)
+
           // 返回Uint8Array格式结果
           if (typeof result === 'string') {
+            console.log('Import - Argon2 result is string')
             // 如果结果是字符串，需要解码
             const rawResult = await argon2.hash(passwordBuffer, {
               salt: saltBuffer,
@@ -338,8 +386,10 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
               type: type,
               raw: true
             })
+            console.log('Import - Argon2 raw result:', rawResult)
             return new Uint8Array(rawResult)
           } else {
+            console.log('Import - Argon2 result is Buffer')
             // 如果结果是Buffer，直接转换为Uint8Array
             return new Uint8Array(result)
           }
@@ -356,13 +406,14 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
       throw new Error('kdbxweb.ProtectedValue is undefined')
     }
 
-    if (!kdbxweb.ProtectedValue.fromBinary) {
-      console.error('kdbxweb.ProtectedValue.fromBinary is undefined')
-      throw new Error('kdbxweb.ProtectedValue.fromBinary is undefined')
+    if (!kdbxweb.ProtectedValue.fromString) {
+      console.error('kdbxweb.ProtectedValue.fromString is undefined')
+      throw new Error('kdbxweb.ProtectedValue.fromString is undefined')
     }
 
+    console.log('importPassword', masterPassword)
     const credentials = new kdbxweb.KdbxCredentials(
-      kdbxweb.ProtectedValue.fromBinary(kdbxweb.ByteUtils.stringToBytes(masterPassword))
+      kdbxweb.ProtectedValue.fromString(masterPassword)
     )
 
     // 确保 fileData 是 ArrayBuffer 类型
