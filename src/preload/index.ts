@@ -19,6 +19,7 @@ interface UserAPI {
   registerUser: (username: string, password: string) => Promise<number | undefined>
   validateUser: (username: string, password: string) => Promise<boolean>
   userExists: (username: string) => Promise<boolean>
+  logoutUser: () => Promise<void>
 }
 
 // 定义 SecurityAPI 接口
@@ -58,7 +59,8 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.invoke('register-user', username, password),
     validateUser: (username: string, password: string): Promise<boolean> =>
       ipcRenderer.invoke('validate-user', username, password),
-    userExists: (username: string): Promise<boolean> => ipcRenderer.invoke('user-exists', username)
+    userExists: (username: string): Promise<boolean> => ipcRenderer.invoke('user-exists', username),
+    logoutUser: (): Promise<void> => ipcRenderer.invoke('logout-user')
   },
   security: {
     lockApplication: (): Promise<boolean> => ipcRenderer.invoke('lock-application'),

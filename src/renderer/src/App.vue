@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import PasswordManager from './components/PasswordManager.vue'
 import Login from './components/Login.vue'
 import Register from './components/Register.vue'
@@ -27,6 +27,13 @@ const switchToRegister = (): void => {
 const switchToLogin = (): void => {
   authView.value = 'login'
 }
+
+// 监听退出事件
+onMounted(() => {
+  window.addEventListener('logout', () => {
+    isAuthenticated.value = false
+  })
+})
 </script>
 
 <template>
