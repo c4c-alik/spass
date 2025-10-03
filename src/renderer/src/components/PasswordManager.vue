@@ -9,6 +9,10 @@
         <span>SPass</span>
       </div>
       <div class="actions">
+        <div class="user-info">
+          <span class="greeting">Hi~</span>
+          <span class="username">{{ username }}</span>
+        </div>
         <button class="btn" type="button" @click="openImportModal">
           <Icon name="file-import" :width="24" :height="24" />
           <span>导入</span>
@@ -174,6 +178,10 @@ import PasswordModal from './PasswordModal.vue'
 import ImportModal from './ImportModal.vue'
 import ExportModal from './ExportModal.vue'
 import Icon from './Icon.vue'
+
+const props = defineProps<{
+  username: string
+}>()
 
 // 定义密码接口
 interface Password {
@@ -994,5 +1002,25 @@ body {
   .sidebar-hidden {
     display: block !important;
   }
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  margin-right: 10px;
+  padding: 5px 15px;
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+  font-size: 0.9rem;
+}
+
+.greeting {
+  font-style: italic;
+}
+
+.username {
+  font-weight: 600;
 }
 </style>

@@ -7,10 +7,12 @@ import Register from './components/Register.vue'
 // 认证状态
 const isAuthenticated = ref(false)
 const authView = ref('login') // 'login' or 'register'
+const currentUsername = ref('')
 
 // 处理登录成功事件
-const handleLoginSuccess = (): void => {
+const handleLoginSuccess = (username: string): void => {
   isAuthenticated.value = true
+  currentUsername.value = username
 }
 
 // 处理注册成功事件
@@ -32,6 +34,7 @@ const switchToLogin = (): void => {
 onMounted(() => {
   window.addEventListener('logout', () => {
     isAuthenticated.value = false
+    currentUsername.value = ''
   })
 })
 </script>
@@ -39,7 +42,7 @@ onMounted(() => {
 <template>
   <div id="app">
     <template v-if="isAuthenticated">
-      <PasswordManager />
+      <PasswordManager :username="currentUsername" />
     </template>
     <template v-else>
       <Login
