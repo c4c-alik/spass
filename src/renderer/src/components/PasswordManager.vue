@@ -9,15 +9,6 @@
         <span>SPass</span>
       </div>
       <div class="actions">
-<!--        <button class="btn sync-btn" type="button" @click="syncPasswords">-->
-<!--          <Icon name="sync" :width="24" :height="24" />-->
-<!--          <span>同步</span>-->
-<!--        </button>-->
-<!--        <button class="btn" type="button" @click="openSettings">-->
-<!--          <Icon name="cog" :width="24" :height="24" />-->
-<!--          <span>设置</span>-->
-<!--        </button>-->
-        <!-- 导入导出按钮 -->
         <button class="btn" type="button" @click="openImportModal">
           <Icon name="file-import" :width="24" :height="24" />
           <span>导入</span>
@@ -25,6 +16,10 @@
         <button class="btn" type="button" @click="openExportModal">
           <Icon name="file-export" :width="24" :height="24" />
           <span>导出</span>
+        </button>
+        <button class="btn" type="button" @click="logout">
+          <Icon name="sign-out" :width="24" :height="24" />
+          <span>退出</span>
         </button>
         <!-- 汉堡菜单按钮 -->
         <button class="btn hamburger-btn" type="button" @click="toggleSidebar">
@@ -366,6 +361,18 @@ const openExportModal = (): void => {
 
 const closeExportModal = (): void => {
   showExportModal.value = false
+}
+
+// 用户退出功能
+const logout = async (): Promise<void> => {
+  try {
+    // 调用主进程的退出处理函数
+    await window.api.user.logoutUser()
+    // 发送事件到父组件以切换到登录视图
+    window.dispatchEvent(new CustomEvent('logout'))
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
 }
 </script>
 

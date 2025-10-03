@@ -116,6 +116,36 @@ async function saveMemoryDbToEncryptedFile(): Promise<void> {
   }
 }
 
+// 添加用户退出处理函数
+async function handleUserLogout(): Promise<void> {
+  try {
+    // 保存当前用户的内存数据库到加密文件
+    await saveMemoryDbToEncryptedFile()
+
+    // 清除内存数据库
+    await memoryDb.close()
+    memoryDb = new MemoryDatabase()
+
+    // 清除主密钥
+    encryptionManager.clearMasterKey()
+
+    // 清除用户ID
+    // 注意：这里我们不实际调用setUserId(null)，因为这会改变加密文件路径
+    // 而是在下次登录时自动设置新的用户ID
+
+    // 清除自动锁定定时器
+    if (autoLockTimeout) {
+      clearTimeout(autoLockTimeout)
+      autoLockTimeout = null
+    }
+
+    console.log('User logged out successfully')
+  } catch (error) {
+    console.error('Error during user logout:', error)
+    throw error
+  }
+}
+
 // 自动锁定功能
 function setupAutoLock(): void {
   // 清除现有的自动锁定定时器
@@ -126,16 +156,21 @@ function setupAutoLock(): void {
   // 设置30分钟无操作自动锁定
   autoLockTimeout = setTimeout(
     async () => {
-      // 不再自动锁定时保存数据到加密文件
+      try {
+        // 保存数据到加密文件
+        await saveMemoryDbToEncryptedFile()
 
-      // 清除内存数据库
-      await memoryDb.close()
-      memoryDb = new MemoryDatabase()
+        // 清除内存数据库
+        await memoryDb.close()
+        memoryDb = new MemoryDatabase()
 
-      // 清除主密钥
-      encryptionManager.clearMasterKey()
+        // 清除主密钥
+        encryptionManager.clearMasterKey()
 
-      console.log('Application auto-locked due to inactivity')
+        console.log('Application auto-locked due to inactivity')
+      } catch (error) {
+        console.error('Error during auto-lock:', error)
+      }
     },
     30 * 60 * 1000
   ) // 30分钟
@@ -478,6 +513,12 @@ ipcMain.handle('lock-application', async () => {
     autoLockTimeout = null
   }
 
+  return true
+})
+
+// 用户退出处理
+ipcMain.handle('logout-user', async () => {
+  await handleUserLogout()
   return true
 })
 
