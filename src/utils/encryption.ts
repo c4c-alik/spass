@@ -31,11 +31,25 @@ export class EncryptionManager {
   private masterKey: Buffer | null = null
   private dbPath: string
   private encryptedDbPath: string
+  private userId: string | null = null
 
   constructor() {
     const userDataPath = app.getPath('userData')
     this.dbPath = path.join(userDataPath, 'passwords.db')
+    // 默认加密数据库路径，但会在用户登录时更新
     this.encryptedDbPath = path.join(userDataPath, 'passwords.db.encrypted')
+    this.userId = null
+  }
+
+  /**
+   * 设置当前用户ID，用于创建用户特定的加密数据库文件
+   * @param userId 用户ID
+   */
+  setUserId(userId: string): void {
+    this.userId = userId
+    const userDataPath = app.getPath('userData')
+    // 为每个用户创建唯一的加密数据库文件
+    this.encryptedDbPath = path.join(userDataPath, `passwords_${userId}.db.encrypted`)
   }
 
   /**

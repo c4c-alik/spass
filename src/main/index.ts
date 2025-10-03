@@ -69,7 +69,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  app.on('activate', function() {
+  app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -421,27 +421,36 @@ ipcMain.handle('validate-user', async (_event, username, password) => {
   const isValid = await userDb.validateUser(username, password)
 
   if (isValid) {
-    // 设置主密钥
-    await encryptionManager.setMasterKey(password)
+    // 获取用户信息以获取用户ID
+    const db = await userDb.init()
+    const user = await db.get<any>('SELECT id FROM users WHERE username = ?', [username])
 
-    // 初始化内存数据库
-    await memoryDb.init()
+    if (user) {
+      // 设置用户ID，用于创建用户特定的加密数据库文件
+      encryptionManager.setUserId(user.id.toString())
 
-    // 尝试加载已有的加密数据库
-    try {
-      const exists = await encryptionManager.encryptedDatabaseExists()
-      if (exists) {
-        const dbBuffer = await encryptionManager.loadEncryptedDatabase()
-        if (dbBuffer.length > 0) {
-          await memoryDb.loadFromBuffer(dbBuffer)
+      // 设置主密钥
+      await encryptionManager.setMasterKey(password)
+
+      // 初始化内存数据库
+      await memoryDb.init()
+
+      // 尝试加载已有的加密数据库
+      try {
+        const exists = await encryptionManager.encryptedDatabaseExists()
+        if (exists) {
+          const dbBuffer = await encryptionManager.loadEncryptedDatabase()
+          if (dbBuffer.length > 0) {
+            await memoryDb.loadFromBuffer(dbBuffer)
+          }
         }
+      } catch (error) {
+        console.error('Failed to load encrypted database:', error)
       }
-    } catch (error) {
-      console.error('Failed to load encrypted database:', error)
-    }
 
-    // 设置自动锁定
-    setupAutoLock()
+      // 设置自动锁定
+      setupAutoLock()
+    }
   }
 
   return isValid
