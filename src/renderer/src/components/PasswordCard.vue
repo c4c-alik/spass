@@ -59,7 +59,12 @@
         <span>编辑</span>
       </button>
       <button class="action-btn" type="button" @click="toggleFavorite">
-        <Icon :name="password.isFavorited ? 'star-filled' : 'star'" :width="24" :height="24" />
+        <Icon
+          :name="password.isFavorited ? 'star-filled' : 'star'"
+          :width="24"
+          :height="24"
+          :class="password.isFavorited ? 'star-filled-icon' : 'star-icon'"
+        />
         <span>{{ password.isFavorited ? '取消收藏' : '收藏' }}</span>
       </button>
       <button class="action-btn" type="button" @click="$emit('delete', password.id)">
@@ -71,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import Icon from './Icon.vue'
 
 // 定义组件属性
@@ -394,6 +399,19 @@ function isDotActive(index: number): boolean {
 .action-btn:hover {
   background: rgba(67, 97, 238, 0.1);
   color: var(--primary);
+}
+
+/* 收藏按钮特殊样式 */
+.action-btn:nth-child(2) .star-filled-icon {
+  color: #ffc107; /* 黄色 */
+}
+
+.action-btn:nth-child(2):hover .star-filled-icon {
+  color: #ffc107;
+}
+
+.action-btn:nth-child(2):hover {
+  background: rgba(255, 193, 7, 0.1);
 }
 
 .strength-indicator {
