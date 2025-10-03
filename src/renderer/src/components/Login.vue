@@ -67,7 +67,7 @@ const error = ref('')
 
 // 定义事件发射器
 const emit = defineEmits<{
-  (e: 'login-success'): void
+  (e: 'login-success', username: string): void
   (e: 'switch-to-register'): void
 }>()
 
@@ -90,8 +90,8 @@ const handleLogin = async (): Promise<void> => {
     )
     
     if (isValid) {
-      // 登录成功，触发事件
-      emit('login-success')
+      // 登录成功，触发事件并传递用户名
+      emit('login-success', loginForm.value.username)
     } else {
       // 登录失败，显示错误信息
       error.value = '用户名或密码错误'
