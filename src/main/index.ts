@@ -13,10 +13,12 @@ app.commandLine.appendSwitch('locale', 'zh-CN')
 let userDb: UserDatabase
 let memoryDb: MemoryDatabase
 let autoLockTimeout: NodeJS.Timeout | null = null
+let autoLockTime = 30 * 60 * 1000 // 默认30分钟
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false,
@@ -29,7 +31,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow!.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -73,6 +75,13 @@ app.whenReady().then(() => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+
+  // 监听锁定事件
+  ipcMain.on('app-locked', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('app-locked')
+    }
   })
 })
 
@@ -153,27 +162,38 @@ function setupAutoLock(): void {
     clearTimeout(autoLockTimeout)
   }
 
-  // 设置30分钟无操作自动锁定
-  autoLockTimeout = setTimeout(
-    async () => {
-      try {
-        // 保存数据到加密文件
-        await saveMemoryDbToEncryptedFile()
+  // 设置自动锁定
+  autoLockTimeout = setTimeout(async () => {
+    try {
+      // 保存数据到加密文件
+      await saveMemoryDbToEncryptedFile()
 
-        // 清除内存数据库
-        await memoryDb.close()
-        memoryDb = new MemoryDatabase()
+      // 清除内存数据库
+      await memoryDb.close()
+      memoryDb = new MemoryDatabase()
 
-        // 清除主密钥
-        encryptionManager.clearMasterKey()
+      // 清除主密钥
+      encryptionManager.clearMasterKey()
 
-        console.log('Application auto-locked due to inactivity')
-      } catch (error) {
-        console.error('Error during auto-lock:', error)
+      // 通知渲染进程应用已锁定
+      if (mainWindow) {
+        mainWindow.webContents.send('app-locked')
       }
-    },
-    30 * 60 * 1000
-  ) // 30分钟
+
+      console.log('Application auto-locked due to inactivity')
+    } catch (error) {
+      console.error('Error during auto-lock:', error)
+    }
+  }, autoLockTime)
+}
+
+// 更新自动锁定时间
+function updateAutoLockTime(newTime: number): void {
+  autoLockTime = newTime
+  // 如果已经设置了定时器，重新设置
+  if (autoLockTimeout) {
+    setupAutoLock()
+  }
 }
 
 // IPC 通信处理
@@ -279,6 +299,8 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
       throw new Error('kdbxweb.ProtectedValue.fromString is undefined')
     }
 
+    console.log("export:", masterPassword)
+    // 即使masterPassword为空，也要确保创建有效的凭证
     const credentials = new kdbxweb.KdbxCredentials(
       kdbxweb.ProtectedValue.fromString(masterPassword || '')
     )
@@ -332,6 +354,8 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
       throw new Error('kdbxweb.ProtectedValue.fromString is undefined')
     }
 
+    console.log("import:", masterPassword)
+    // 确保即使masterPassword为空也创建有效的凭证
     const credentials = new kdbxweb.KdbxCredentials(
       kdbxweb.ProtectedValue.fromString(masterPassword || '')
     )
@@ -497,23 +521,28 @@ ipcMain.handle('user-exists', async (_event, username) => {
 
 // 手动锁定应用
 ipcMain.handle('lock-application', async () => {
-  // 保存数据到加密文件（手动锁定时仍然保存）
-  await saveMemoryDbToEncryptedFile()
+  try {
+    // 保存数据到加密文件（手动锁定时仍然保存）
+    await saveMemoryDbToEncryptedFile()
 
-  // 清除内存数据库
-  await memoryDb.close()
-  memoryDb = new MemoryDatabase()
+    // 清除内存数据库
+    await memoryDb.close()
+    memoryDb = new MemoryDatabase()
 
-  // 清除主密钥
-  encryptionManager.clearMasterKey()
+    // 清除主密钥
+    encryptionManager.clearMasterKey()
 
-  // 清除自动锁定定时器
-  if (autoLockTimeout) {
-    clearTimeout(autoLockTimeout)
-    autoLockTimeout = null
+    // 清除自动锁定定时器
+    if (autoLockTimeout) {
+      clearTimeout(autoLockTimeout)
+      autoLockTimeout = null
+    }
+
+    return true
+  } catch (error) {
+    console.error('Lock application failed:', error)
+    return false
   }
-
-  return true
 })
 
 // 用户退出处理
@@ -556,4 +585,10 @@ ipcMain.handle('toggle-favorite', async (_event, id) => {
   // 不再每次操作后保存到加密文件
 
   return result
+})
+
+// 更新自动锁定时间
+ipcMain.handle('update-auto-lock-time', async (_event, time) => {
+  updateAutoLockTime(time)
+  return true
 })

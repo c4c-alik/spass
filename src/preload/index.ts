@@ -20,6 +20,7 @@ interface UserAPI {
   validateUser: (username: string, password: string) => Promise<boolean>
   userExists: (username: string) => Promise<boolean>
   logoutUser: () => Promise<void>
+  updateAutoLockTime: (time: number) => Promise<void>
 }
 
 // 定义 SecurityAPI 接口
@@ -28,11 +29,18 @@ interface SecurityAPI {
   isApplicationLocked: () => Promise<boolean>
 }
 
+// 定义 ElectronAPI 接口
+interface ElectronAPI {
+  onAppLocked: (callback: () => void) => void
+  removeAppLockedListener: (callback: () => void) => void
+}
+
 // 定义整体 API 接口
 interface API {
   password: PasswordAPI
   user: UserAPI
   security: SecurityAPI
+  electronAPI: ElectronAPI
 }
 
 // 暴露 API 到渲染进程
@@ -60,10 +68,21 @@ contextBridge.exposeInMainWorld('api', {
     validateUser: (username: string, password: string): Promise<boolean> =>
       ipcRenderer.invoke('validate-user', username, password),
     userExists: (username: string): Promise<boolean> => ipcRenderer.invoke('user-exists', username),
-    logoutUser: (): Promise<void> => ipcRenderer.invoke('logout-user')
+    logoutUser: (): Promise<void> => ipcRenderer.invoke('logout-user'),
+    updateAutoLockTime: (time: number): Promise<void> => ipcRenderer.invoke('update-auto-lock-time', time)
   },
   security: {
     lockApplication: (): Promise<boolean> => ipcRenderer.invoke('lock-application'),
     isApplicationLocked: (): Promise<boolean> => ipcRenderer.invoke('is-application-locked')
   }
 } as API)
+
+// 暴露 Electron API
+contextBridge.exposeInMainWorld('electronAPI', {
+  onAppLocked: (callback: () => void): void => {
+    ipcRenderer.on('app-locked', callback)
+  },
+  removeAppLockedListener: (callback: () => void): void => {
+    ipcRenderer.removeListener('app-locked', callback)
+  }
+} as ElectronAPI)
