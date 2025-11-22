@@ -11,6 +11,7 @@
       <div class="actions">
         <div class="user-info">
           <span class="greeting">Hi~</span>
+          <Icon name="user" :width="20" :height="20" />
           <span class="username">{{ username }}</span>
         </div>
         <button class="btn" type="button" @click="openImportModal">
@@ -20,6 +21,14 @@
         <button class="btn" type="button" @click="openExportModal">
           <Icon name="file-export" :width="24" :height="24" />
           <span>导出</span>
+        </button>
+        <button class="btn" type="button" @click="lockApplication">
+          <Icon name="lock" :width="24" :height="24" />
+          <span>锁屏</span>
+        </button>
+        <button class="btn" type="button" @click="openSettings">
+          <Icon name="cog" :width="24" :height="24" />
+          <span>设置</span>
         </button>
         <button class="btn" type="button" @click="logout">
           <Icon name="sign-out" :width="24" :height="24" />
@@ -140,7 +149,7 @@
       </div>
       <div class="lock-status">
         <Icon name="clock" :width="24" :height="24" />
-        <span>自动锁定: 5分钟</span>
+        <span>自动锁定: {{ autoLockTimeText }}</span>
       </div>
     </div>
 
@@ -168,11 +177,39 @@
       @close="closeExportModal"
       @export-success="loadPasswords"
     />
+
+    <!-- 设置模态框 -->
+    <div v-if="showSettingsModal" class="modal-overlay visible">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">设置</h3>
+          <button class="modal-close" @click="closeSettingsModal">
+            <Icon name="x" :width="24" :height="24" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="autoLockTime">自动锁定时间（分钟）</label>
+            <select id="autoLockTime" v-model="tempSettings.autoLockTime">
+              <option value="5">5分钟</option>
+              <option value="10">10分钟</option>
+              <option value="15">15分钟</option>
+              <option value="30">30分钟</option>
+              <option value="60">60分钟</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn secondary" @click="closeSettingsModal">取消</button>
+          <button class="modal-btn primary" @click="saveSettings">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import PasswordCard from './PasswordCard.vue'
 import PasswordModal from './PasswordModal.vue'
 import ImportModal from './ImportModal.vue'
@@ -212,6 +249,24 @@ const isSidebarHidden = ref(false)
 const showImportModal = ref(false)
 const showExportModal = ref(false)
 
+// 设置相关状态
+const showSettingsModal = ref(false)
+const settings = ref({
+  autoLockTime: 30 // 默认30分钟
+})
+const tempSettings = ref({
+  autoLockTime: 30 // 临时设置
+})
+
+// 计算自动锁定时间文本
+const autoLockTimeText = computed(() => {
+  const time = settings.value.autoLockTime
+  if (time >= 60) {
+    return `${time / 60}小时`
+  }
+  return `${time}分钟`
+})
+
 // 计算属性
 const filteredPasswords = computed(() => {
   let filtered = passwords.value
@@ -249,9 +304,25 @@ const categories = [
   { id: 'app', name: '应用', icon: 'mobile' }
 ]
 
-// 生命周期钩子
+// 监听应用锁定事件
+const handleAppLocked = (): void => {
+  window.dispatchEvent(new CustomEvent('lock'))
+}
+
 onMounted(async () => {
   await loadPasswords()
+  loadSettings()
+
+  window.addEventListener('update-auto-lock-time', async (event: CustomEvent) => {
+    await window.api.user.updateAutoLockTime(event.detail.time)
+  })
+
+  // 监听主进程发送的锁定事件
+  window.electronAPI.onAppLocked(handleAppLocked)
+})
+
+onBeforeUnmount(() => {
+  window.electronAPI.removeAppLockedListener(handleAppLocked)
 })
 
 // 加载密码数据
@@ -336,7 +407,34 @@ const syncPasswords = (): void => {
 
 // 打开设置
 const openSettings = (): void => {
-  console.log('Opening settings...')
+  // 打开设置时，将当前设置复制到临时设置
+  tempSettings.value.autoLockTime = settings.value.autoLockTime
+  showSettingsModal.value = true
+}
+
+// 关闭设置
+const closeSettingsModal = (): void => {
+  showSettingsModal.value = false
+}
+
+// 保存设置
+const saveSettings = async (): Promise<void> => {
+  // 保存设置到本地存储
+  settings.value.autoLockTime = tempSettings.value.autoLockTime
+  localStorage.setItem('spass-settings', JSON.stringify(settings.value))
+
+  // 通知主进程更新自动锁定时间
+  await window.api.user.updateAutoLockTime(settings.value.autoLockTime * 60 * 1000)
+
+  closeSettingsModal()
+}
+
+// 加载设置
+const loadSettings = (): void => {
+  const savedSettings = localStorage.getItem('spass-settings')
+  if (savedSettings) {
+    settings.value = JSON.parse(savedSettings)
+  }
 }
 
 // 生成密码
@@ -369,6 +467,18 @@ const openExportModal = (): void => {
 
 const closeExportModal = (): void => {
   showExportModal.value = false
+}
+
+// 主动锁屏功能
+const lockApplication = async (): Promise<void> => {
+  try {
+    // 调用主进程的锁屏功能
+    await window.api.security.lockApplication()
+    // 触发锁屏事件
+    window.dispatchEvent(new CustomEvent('lock'))
+  } catch (error) {
+    console.error('Lock application failed:', error)
+  }
 }
 
 // 用户退出功能
