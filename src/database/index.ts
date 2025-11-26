@@ -140,7 +140,7 @@ class PasswordDatabase {
           password.username,
           password.password,
           password.url || null,
-          password.category || 'other',
+          password.group || password.category || 'other',
           password.notes || null,
           password.strength || 'medium'
         ]
@@ -185,21 +185,20 @@ class PasswordDatabase {
           url = ?,
           category = ?,
           notes = ?,
-          strength = ?,
-          updated_at = CURRENT_TIMESTAMP
+          strength = ?
         WHERE id = ?`,
         [
           password.service,
           password.username,
           password.password,
           password.url || null,
-          password.category || 'other',
+          password.group || password.category || 'other',
           password.notes || null,
           password.strength || 'medium',
           id
         ]
       )
-      return result.changes || 0
+      return result.changes
     } catch (error) {
       console.error('Failed to update password:', error)
       throw error

@@ -81,7 +81,7 @@ const startExport = async () => {
       password: password.password,
       url: password.url || '',
       notes: password.notes || '',
-      category: password.category || 'other'
+      category: password.group || password.category || 'other'
     }))
 
     // 通过主进程创建KDBX数据库

@@ -126,7 +126,8 @@ export default defineComponent({
         username: '',
         password: '',
         url: '',
-        category: ''
+        category: '',
+        group: ''
       },
       showPassword: false, // 控制密码可见性状态
       predefinedCategories: [
@@ -194,7 +195,7 @@ export default defineComponent({
               username: this.password.username || '',
               password: password,
               url: this.password.url || '',
-              category: this.password.category || ''
+              category: this.password.group || this.password.category || ''
             }
           } else {
             // 添加模式：重置表单
@@ -225,7 +226,7 @@ export default defineComponent({
         username: this.formData.username,
         password: this.formData.password,
         url: this.formData.url || '',
-        category: this.formData.category,
+        category: this.formData.group || this.formData.category,
         strength: this.passwordStrength
       }
 
@@ -247,7 +248,8 @@ export default defineComponent({
         username: '',
         password: '',
         url: '',
-        category: ''
+        category: '',
+        group: ''
       }
     },
     generatePassword() {
