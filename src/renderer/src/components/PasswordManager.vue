@@ -275,7 +275,7 @@ const filteredPasswords = computed(() => {
   if (activeCategory.value === 'favorite') {
     filtered = filtered.filter((p) => p.isFavorited)
   } else if (activeCategory.value !== 'all') {
-    filtered = filtered.filter((p) => p.category === activeCategory.value)
+    filtered = filtered.filter((p) => p.group === activeCategory.value)
   }
 
   // 搜索过滤
