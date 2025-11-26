@@ -247,32 +247,18 @@ async function setupKdbxEnvironment() {
         }
 
         // 调用argon2.hash进行哈希计算，使用正确的参数格式
-        const result = await argon2.hash(passwordBuffer, {
+        const rawResult = await argon2.hash(passwordBuffer, {
           salt: saltBuffer,
           timeCost: iterations,
           memoryCost: memory,
           parallelism: parallelism,
           hashLength: length,
-          type: type
+          type: type,
+          raw: true
         })
 
         // 返回Uint8Array格式结果
-        if (typeof result === 'string') {
-          // 如果结果是字符串，需要解码
-          const rawResult = await argon2.hash(passwordBuffer, {
-            salt: saltBuffer,
-            timeCost: iterations,
-            memoryCost: memory,
-            parallelism: parallelism,
-            hashLength: length,
-            type: type,
-            raw: true
-          })
-          return new Uint8Array(rawResult)
-        } else {
-          // 如果结果是Buffer，直接转换为Uint8Array
-          return new Uint8Array(result)
-        }
+        return new Uint8Array(rawResult)
       } catch (error) {
         console.error('Error in Argon2 implementation:', error)
         throw error
@@ -299,7 +285,7 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
       throw new Error('kdbxweb.ProtectedValue.fromString is undefined')
     }
 
-    console.log("export:", masterPassword)
+    console.log('export:', masterPassword)
     // 即使masterPassword为空，也要确保创建有效的凭证
     const credentials = new kdbxweb.KdbxCredentials(
       kdbxweb.ProtectedValue.fromString(masterPassword || '')
@@ -354,7 +340,7 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
       throw new Error('kdbxweb.ProtectedValue.fromString is undefined')
     }
 
-    console.log("import:", masterPassword)
+    console.log('import:', masterPassword)
     // 确保即使masterPassword为空也创建有效的凭证
     const credentials = new kdbxweb.KdbxCredentials(
       kdbxweb.ProtectedValue.fromString(masterPassword || '')
