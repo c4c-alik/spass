@@ -9,7 +9,7 @@ export interface PasswordEntry {
   username: string
   password: string
   url?: string
-  category?: string
+  group?: string
   notes?: string
   strength?: 'weak' | 'medium' | 'strong'
   isFavorited?: boolean
@@ -112,7 +112,7 @@ class PasswordDatabase {
         username TEXT NOT NULL,
         password TEXT NOT NULL,
         url TEXT,
-        category TEXT DEFAULT 'other',
+        group TEXT DEFAULT 'other',
         notes TEXT,
         strength TEXT DEFAULT 'medium',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -122,7 +122,7 @@ class PasswordDatabase {
 
     // 创建索引
     await this.db.exec('CREATE INDEX IF NOT EXISTS idx_service ON passwords(service)')
-    await this.db.exec('CREATE INDEX IF NOT EXISTS idx_category ON passwords(category)')
+    await this.db.exec('CREATE INDEX IF NOT EXISTS idx_group ON passwords("group")')
 
     console.log('Database initialized at:', this.dbPath)
     return this.db
@@ -133,14 +133,14 @@ class PasswordDatabase {
     try {
       const db = await this.init()
       const result = await db.run(
-        `INSERT INTO passwords (service, username, password, url, category, notes, strength)
+        `INSERT INTO passwords (service, username, password, url, "group", notes, strength)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           password.service,
           password.username,
           password.password,
           password.url || null,
-          password.group || password.category || 'other',
+          password.group || 'other',
           password.notes || null,
           password.strength || 'medium'
         ]
@@ -157,7 +157,7 @@ class PasswordDatabase {
     try {
       const db = await this.init()
       return db.all<PasswordEntry>(`
-        SELECT id, service, username, password, url, category, notes, strength,
+        SELECT id, service, username, password, url, "group", notes, strength,
                datetime(created_at) as createdAt,
                datetime(updated_at) as updatedAt
         FROM passwords
@@ -183,7 +183,7 @@ class PasswordDatabase {
           username = ?,
           password = ?,
           url = ?,
-          category = ?,
+          "group" = ?,
           notes = ?,
           strength = ?
         WHERE id = ?`,
@@ -192,7 +192,7 @@ class PasswordDatabase {
           password.username,
           password.password,
           password.url || null,
-          password.group || password.category || 'other',
+          password.group || 'other',
           password.notes || null,
           password.strength || 'medium',
           id
@@ -225,21 +225,18 @@ class PasswordDatabase {
   }
 
   // 按服务搜索密码
-  async searchPasswords(query: string): Promise<PasswordEntry[]> {
+  async searchPasswords(searchTerm: string): Promise<PasswordEntry[]> {
     try {
-      if (!query) {
-        return this.getAllPasswords()
-      }
-
       const db = await this.init()
+      const query = `%${searchTerm}%`
       return db.all<PasswordEntry>(`
-        SELECT id, service, username, password, url, category, notes, strength,
+        SELECT id, service, username, password, url, "group", notes, strength,
                datetime(created_at) as createdAt,
                datetime(updated_at) as updatedAt
         FROM passwords
-        WHERE service LIKE ? OR username LIKE ? OR url LIKE ?
+        WHERE service LIKE ? OR username LIKE ?
         ORDER BY service
-      `, [`%${query}%`, `%${query}%`, `%${query}%`])
+      `, [query, query])
     } catch (error) {
       console.error('Failed to search passwords:', error)
       throw error

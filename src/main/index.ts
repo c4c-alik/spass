@@ -301,7 +301,7 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     passwords.forEach((password: any, index) => {
       try {
         // 获取或创建组
-        const groupName = password.group || password.category || 'other'
+        const groupName = password.group || 'other'
         let group = groupMap.get(groupName)
 
         if (!group) {
@@ -321,6 +321,8 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
         if (password.notes) {
           entry.fields.set('Notes', password.notes)
         }
+        // 添加自定义字段
+        entry.fields.set('Group', groupName)
       } catch (entryError) {
         console.error(`Error creating entry ${index}:`, entryError)
         throw entryError
@@ -328,8 +330,8 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     })
 
     // 保存数据库
-    const prettyPrintedXml = await db.saveXml(true)
-    console.log(prettyPrintedXml)
+    // const prettyPrintedXml = await db.saveXml(true)
+    // console.log(prettyPrintedXml)
     return await db.save()
   } catch (error) {
     console.error('KDBX导出失败:', error)
@@ -394,7 +396,7 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
               : '',
             url: entry.fields.get('URL') || '',
             notes: entry.fields.get('Notes') || '',
-            category: group.name || 'other'
+            group: entry.fields.get('Group') || group.name || 'other'
           })
         })
 
@@ -495,35 +497,40 @@ ipcMain.handle('validate-user', async (_event, username, password) => {
   const isValid = await userDb.validateUser(username, password)
 
   if (isValid) {
-    // 获取用户信息以获取用户ID
-    const db = await userDb.init()
-    const user = await db.get<any>('SELECT id FROM users WHERE username = ?', [username])
+    try {
+      // 获取用户信息以获取用户ID
+      const db = await userDb.init()
+      const user = await db.get<any>('SELECT id FROM users WHERE username = ?', [username])
 
-    if (user) {
-      // 设置用户ID，用于创建用户特定的加密数据库文件
-      encryptionManager.setUserId(user.id.toString())
+      if (user) {
+        // 设置用户ID，用于创建用户特定的加密数据库文件
+        encryptionManager.setUserId(user.id.toString())
 
-      // 设置主密钥
-      await encryptionManager.setMasterKey(password)
+        // 设置主密钥
+        await encryptionManager.setMasterKey(password)
 
-      // 初始化内存数据库
-      await memoryDb.init()
+        // 初始化内存数据库
+        await memoryDb.init()
 
-      // 尝试加载已有的加密数据库
-      try {
-        const exists = await encryptionManager.encryptedDatabaseExists()
-        if (exists) {
-          const dbBuffer = await encryptionManager.loadEncryptedDatabase()
-          if (dbBuffer.length > 0) {
-            await memoryDb.loadFromBuffer(dbBuffer)
+        // 尝试加载已有的加密数据库
+        try {
+          const exists = await encryptionManager.encryptedDatabaseExists()
+          if (exists) {
+            const dbBuffer = await encryptionManager.loadEncryptedDatabase()
+            if (dbBuffer.length > 0) {
+              await memoryDb.loadFromBuffer(dbBuffer)
+            }
           }
+        } catch (error) {
+          console.error('Failed to load encrypted database:', error)
         }
-      } catch (error) {
-        console.error('Failed to load encrypted database:', error)
-      }
 
-      // 设置自动锁定
-      setupAutoLock()
+        // 设置自动锁定
+        setupAutoLock()
+      }
+    } catch (error) {
+      console.error('Error during user session initialization:', error)
+      throw error
     }
   }
 

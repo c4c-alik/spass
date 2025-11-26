@@ -57,7 +57,7 @@
 
         <div class="form-group">
           <label for="category">分类</label>
-          <select id="category" v-model="formData.category">
+          <select id="category" v-model="formData.group">
             <option value="">请选择分类</option>
             <option
               v-for="category in predefinedCategories"
@@ -195,7 +195,7 @@ export default defineComponent({
               username: this.password.username || '',
               password: password,
               url: this.password.url || '',
-              category: this.password.group || this.password.category || ''
+              group: this.password.group || ''
             }
           } else {
             // 添加模式：重置表单
@@ -226,7 +226,7 @@ export default defineComponent({
         username: this.formData.username,
         password: this.formData.password,
         url: this.formData.url || '',
-        category: this.formData.group || this.formData.category,
+        group: this.formData.group,
         strength: this.passwordStrength
       }
 
@@ -248,7 +248,6 @@ export default defineComponent({
         username: '',
         password: '',
         url: '',
-        category: '',
         group: ''
       }
     },
@@ -287,8 +286,8 @@ export default defineComponent({
         other: '#6c757d'
       }
 
-      this.formData.icon = categoryIcons[this.formData.category] || 'key'
-      this.formData.color = categoryColors[this.formData.category] || '#4361ee'
+      this.formData.icon = categoryIcons[this.formData.group] || 'key'
+      this.formData.color = categoryColors[this.formData.group] || '#4361ee'
     },
     // 处理分类输入
     handleCategoryInput() {

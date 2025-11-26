@@ -20,7 +20,7 @@ export interface EncryptedPasswordEntry {
   username: string
   password: string // 这里存储的是加密后的密码
   url?: string
-  category?: string
+  group?: string
   notes?: string
   strength?: 'weak' | 'medium' | 'strong'
   createdAt?: string

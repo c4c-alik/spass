@@ -6,32 +6,13 @@
         <Icon :name="password.icon" :width="24" :height="24" />
       </div>
       <div class="card-title">
-        <div class="title-row">
-          <h3>{{ password.service }}</h3>
-          <!-- 将分类和链接图标移到标题旁边 -->
-          <div class="title-icons">
-            <Icon
-              v-if="password.url && isValidUrl(password.url)"
-              name="link"
-              :width="24"
-              :height="24"
-              class="title-icon link-icon"
-              @click.stop="openLink(password.url)"
-            />
-            <Icon
-              v-if="password.category && getCategoryIcon(password.category)"
-              :name="getCategoryIcon(password.category)"
-              :width="24"
-              :height="24"
-              class="title-icon"
-              :title="getCategoryName(password.category)"
-            />
-          </div>
-        </div>
-        <p>
-          <Icon name="user" :width="16" :height="16" class="user-icon" />
-          {{ password.username }}
-        </p>
+        <h3>{{ password.service }}</h3>
+        <p v-if="password.username">{{ password.username }}</p>
+        <p v-else class="no-username">未设置用户名</p>
+      </div>
+      <div class="category-tag" v-if="password.group">
+        <Icon :name="getCategoryIcon(password.group)" :width="16" :height="16" />
+        <span :title="getCategoryName(password.group)">{{ getCategoryName(password.group) }}</span>
       </div>
     </div>
 
