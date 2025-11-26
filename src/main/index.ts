@@ -71,7 +71,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  app.on('activate', function () {
+  app.on('activate', function() {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -293,10 +293,25 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
 
     const db = kdbxweb.Kdbx.create(credentials, 'SPass')
 
+    // 创建一个映射来跟踪已创建的组
+    const groupMap = new Map<string, any>()
+    groupMap.set('', db.getDefaultGroup()) // 根组
+
     // 创建密码条目
     passwords.forEach((password: any, index) => {
       try {
-        const entry = db.createEntry(db.getDefaultGroup())
+        // 获取或创建组
+        const groupName = password.group || password.category || 'other'
+        let group = groupMap.get(groupName)
+
+        if (!group) {
+          // 如果组不存在，则创建它
+          group = db.createGroup(db.getDefaultGroup(), groupName)
+          groupMap.set(groupName, group)
+        }
+
+        // 在指定的组中创建条目
+        const entry = db.createEntry(group)
         entry.fields.set('Title', password.service)
         entry.fields.set('UserName', password.username)
         entry.fields.set('Password', kdbxweb.ProtectedValue.fromString(password.password))
@@ -306,8 +321,6 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
         if (password.notes) {
           entry.fields.set('Notes', password.notes)
         }
-        // 添加自定义字段
-        entry.fields.set('Category', password.category || 'other')
       } catch (entryError) {
         console.error(`Error creating entry ${index}:`, entryError)
         throw entryError
@@ -315,8 +328,9 @@ ipcMain.handle('export-to-kdbx', async (_event, passwords, masterPassword) => {
     })
 
     // 保存数据库
-    const result = await db.save()
-    return result
+    const prettyPrintedXml = await db.saveXml(true)
+    console.log(prettyPrintedXml)
+    return await db.save()
   } catch (error) {
     console.error('KDBX导出失败:', error)
     console.error('Error stack:', error.stack)
@@ -364,20 +378,35 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
 
     // 提取密码条目
     const passwords: any[] = []
-    db.groups.forEach((group) => {
-      group.entries.forEach((entry) => {
-        passwords.push({
-          service: entry.fields.get('Title') || '',
-          username: entry.fields.get('UserName') || '',
-          password: entry.fields.get('Password')
-            ? kdbxweb.ByteUtils.bytesToString(entry.fields.get('Password').getBinary())
-            : '',
-          url: entry.fields.get('URL') || '',
-          notes: entry.fields.get('Notes') || '',
-          category: entry.fields.get('Category') || 'other'
+
+    // 递归遍历所有组和子组
+    function traverseGroups(groups: any[], path: string = '') {
+      groups.forEach((group) => {
+        const currentPath = path ? `${path}/${group.name}` : group.name
+
+        // 处理组中的条目
+        group.entries.forEach((entry: any) => {
+          passwords.push({
+            service: entry.fields.get('Title') || '',
+            username: entry.fields.get('UserName') || '',
+            password: entry.fields.get('Password')
+              ? kdbxweb.ByteUtils.bytesToString(entry.fields.get('Password').getBinary())
+              : '',
+            url: entry.fields.get('URL') || '',
+            notes: entry.fields.get('Notes') || '',
+            category: group.name || 'other'
+          })
         })
+
+        // 递归处理子组
+        if (group.groups && group.groups.length > 0) {
+          traverseGroups(group.groups, currentPath)
+        }
       })
-    })
+    }
+
+    // 开始遍历根组
+    traverseGroups(db.groups)
 
     return passwords
   } catch (error) {

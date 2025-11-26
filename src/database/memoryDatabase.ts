@@ -275,27 +275,28 @@ export class MemoryDatabase {
 
     // 使用传统回调方式而非promisify，以确保能正确访问this.lastID
     return new Promise((resolve, reject) => {
-      this.db!.run(`
-        INSERT INTO passwords
-        (service, username, password, url, category, notes, strength, is_favorited)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        password.service,
-        password.username,
-        password.password,
-        password.url || null,
-        password.category || 'other',
-        password.notes || null,
-        password.strength || 'medium',
-        password.isFavorited ? 1 : 0  // 将布尔值转换为数字存储
-      ], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          // this.lastID包含插入记录的ID，只有在回调函数中才能正确访问
-          resolve(this.lastID)
+      this.db!.run(
+        `INSERT INTO passwords (service, username, password, url, category, notes, strength, is_favorited)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          password.service,
+          password.username,
+          password.password,
+          password.url || null,
+          password.group || password.category || 'other',
+          password.notes || null,
+          password.strength || 'medium',
+          password.isFavorited ? 1 : 0
+        ],
+        function(err) {
+          if (err) {
+            reject(err)
+          } else {
+            // this.lastID包含插入记录的ID，只有在回调函数中才能正确访问
+            resolve(this.lastID)
+          }
         }
-      })
+      )
     })
   }
 
@@ -335,29 +336,37 @@ export class MemoryDatabase {
 
     // 使用传统回调方式而非promisify，以确保能正确访问this.changes
     return new Promise((resolve, reject) => {
-      this.db!.run(`
-        UPDATE passwords SET
-          service = ?, username = ?, password = ?, url = ?, category = ?,
-          notes = ?, strength = ?, is_favorited = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `, [
-        password.service,
-        password.username,
-        password.password,
-        password.url || null,
-        password.category || 'other',
-        password.notes || null,
-        password.strength || 'medium',
-        password.isFavorited ? 1 : 0,  // 将布尔值转换为数字存储
-        id
-      ], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          // this.changes包含受影响的行数，只有在回调函数中才能正确访问
-          resolve(this.changes || 0)
+      this.db!.run(
+        `UPDATE passwords SET
+          service = ?,
+          username = ?,
+          password = ?,
+          url = ?,
+          category = ?,
+          notes = ?,
+          strength = ?,
+          is_favorited = ?
+        WHERE id = ?`,
+        [
+          password.service,
+          password.username,
+          password.password,
+          password.url || null,
+          password.group || password.category || 'other',
+          password.notes || null,
+          password.strength || 'medium',
+          password.isFavorited ? 1 : 0,
+          id
+        ],
+        function(err) {
+          if (err) {
+            reject(err)
+          } else {
+            // this.changes包含受影响的行数，只有在回调函数中才能正确访问
+            resolve(this.changes || 0)
+          }
         }
-      })
+      )
     })
   }
 
