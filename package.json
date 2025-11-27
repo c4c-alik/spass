@@ -14,7 +14,7 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
-    "postinstall": "electron-builder install-app-deps || echo \"Skipping native module rebuild\"",
+    "postinstall": "echo \"Skipping native module rebuild\"",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
@@ -48,8 +48,5 @@
     "vue": "^3.5.17",
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.0.3"
-  },
-  "optionalDependencies": {
-    "node-gyp": "^10.0.0"
   }
 }
