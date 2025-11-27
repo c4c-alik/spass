@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import UserDatabase from '../database/userDatabase'
 import { encryptionManager } from '../utils/encryption'
 import { MemoryDatabase } from '../database/memoryDatabase'
+import fetch from 'node-fetch'
 
 // 设置应用区域和语言
 app.commandLine.appendSwitch('lang', 'zh-CN')
@@ -613,4 +614,86 @@ ipcMain.handle('toggle-favorite', async (_event, id) => {
 ipcMain.handle('update-auto-lock-time', async (_event, time) => {
   updateAutoLockTime(time)
   return true
+})
+
+// 获取网站favicon
+ipcMain.handle('get-website-favicon', async (_event, url) => {
+  if (!url) return null
+
+  try {
+    // 如果URL没有协议，自动添加https://
+    if (!url.match(/^https?:\/\//)) {
+      url = 'https://' + url
+    }
+
+    const urlObj = new URL(url)
+    
+    // 多种备选方案获取favicon
+    const faviconUrls = [
+      // 直接从网站根目录获取
+      `${urlObj.origin}/favicon.ico`,
+      // 使用国内可用的服务
+      `https://favicon.cccyun.cc/${urlObj.hostname}`,
+      `https://api.iowen.cn/favicon/${urlObj.hostname}.png`,
+      // 备用方案
+      `https://${urlObj.hostname}/favicon.ico`
+    ]
+
+    // 创建一个 AbortController 用于设置超时
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      controller.abort()
+    }, 5000) // 5秒超时
+
+    try {
+      // 尝试每个URL，返回第一个成功的
+      for (const faviconUrl of faviconUrls) {
+        try {
+          const response = await fetch(faviconUrl, {
+            signal: controller.signal,
+            timeout: 5000
+          })
+          
+          if (response.ok) {
+            // 检查内容长度，避免获取过大的文件
+            const contentLength = response.headers.get('content-length')
+            if (contentLength && parseInt(contentLength) > 1024 * 1024) { // 1MB限制
+              console.warn(`Favicon too large: ${faviconUrl}`)
+              continue
+            }
+            
+            // 获取图片数据并转换为base64
+            const buffer = await response.arrayBuffer()
+            
+            // 检查实际数据大小
+            if (buffer.byteLength > 1024 * 1024) { // 1MB限制
+              console.warn(`Favicon too large: ${faviconUrl}`)
+              continue
+            }
+            
+            const base64 = Buffer.from(buffer).toString('base64')
+            const mimeType = response.headers.get('content-type') || 'image/x-icon'
+            clearTimeout(timeout)
+            console.log(`Successfully loaded favicon from: ${faviconUrl}`)
+            return `data:${mimeType};base64,${base64}`
+          } else {
+            console.warn(`Failed to fetch favicon from: ${faviconUrl}, status: ${response.status}`)
+          }
+        } catch (e) {
+          console.warn(`Error fetching favicon from: ${faviconUrl}`, e)
+          // 继续尝试下一个URL
+          continue
+        }
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+    
+    // 如果所有URL都失败，返回null
+    console.log(`Failed to load favicon for: ${url}`)
+    return null
+  } catch (error) {
+    console.error('获取网站favicon失败:', error)
+    return null
+  }
 })
