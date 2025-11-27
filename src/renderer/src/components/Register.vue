@@ -6,14 +6,14 @@
         <h1>SPass</h1>
         <p>安全密码管理器</p>
       </div>
-      
+
       <form @submit.prevent="handleRegister">
         <div class="form-group">
           <label for="username">用户名</label>
           <input
             id="username"
-            type="text"
             v-model="registerForm.username"
+            type="text"
             placeholder="请输入用户名"
             required
           />
@@ -21,66 +21,56 @@
             {{ usernameError }}
           </div>
         </div>
-        
+
         <div class="form-group">
           <label for="password">主密码</label>
           <div class="password-input-container">
             <input
               id="password"
-              :type="showPassword ? 'text' : 'password'"
               v-model="registerForm.password"
+              :type="showPassword ? 'text' : 'password'"
               placeholder="请输入主密码"
               required
             />
-            <button
-              type="button"
-              class="toggle-password"
-              @click="togglePasswordVisibility"
-            >
-              <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="20" :height="20" />
+            <button type="button" class="toggle-password" @click="togglePasswordVisibility">
+              <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
             </button>
           </div>
-          <div class="password-hint">
-            密码长度至少8位，建议包含大小写字母、数字和特殊字符
-          </div>
+          <div class="password-hint">密码长度至少8位，建议包含大小写字母、数字和特殊字符</div>
         </div>
-        
+
         <div class="form-group">
           <label for="confirmPassword">确认主密码</label>
           <div class="password-input-container">
             <input
               id="confirmPassword"
-              :type="showConfirmPassword ? 'text' : 'password'"
               v-model="registerForm.confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'"
               placeholder="请再次输入主密码"
               required
             />
-            <button
-              type="button"
-              class="toggle-password"
-              @click="toggleConfirmPasswordVisibility"
-            >
-              <Icon :name="showConfirmPassword ? 'eye-off' : 'eye'" :width="20" :height="20" />
+            <button type="button" class="toggle-password" @click="toggleConfirmPasswordVisibility">
+              <Icon :name="showConfirmPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
             </button>
           </div>
         </div>
-        
+
         <div class="form-group">
           <button type="button" class="btn btn-secondary" @click="generateStrongPassword">
-            <Icon name="key" :width="16" :height="16" />
+            <Icon name="key" :width="24" :height="24" />
             生成强密码
           </button>
         </div>
-        
+
         <button type="submit" class="btn btn-primary" :disabled="loading">
           {{ loading ? '注册中...' : '注册' }}
         </button>
-        
+
         <div class="form-footer">
           <p>已有账户？<a href="#" @click.prevent="switchToLogin">立即登录</a></p>
         </div>
       </form>
-      
+
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
@@ -119,9 +109,12 @@ const emit = defineEmits<{
 }>()
 
 // 监听用户名变化，清除错误信息
-watch(() => registerForm.value.username, () => {
-  usernameError.value = ''
-})
+watch(
+  () => registerForm.value.username,
+  () => {
+    usernameError.value = ''
+  }
+)
 
 // 切换密码可见性
 const togglePasswordVisibility = (): void => {
@@ -134,23 +127,27 @@ const toggleConfirmPasswordVisibility = (): void => {
 
 // 生成强密码
 const generateStrongPassword = (): void => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
   let password = ''
-  
+
   // 确保至少包含每种类型的字符
   password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]
   password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]
   password += '0123456789'[Math.floor(Math.random() * 10)]
   password += '!@#$%^&*()_+-=[]{}|;:,.<>?'[Math.floor(Math.random() * 23)]
-  
+
   // 剩余12位随机字符
   for (let i = 0; i < 12; i++) {
     password += chars[Math.floor(Math.random() * chars.length)]
   }
-  
+
   // 打乱密码字符顺序
-  password = password.split('').sort(() => 0.5 - Math.random()).join('')
-  
+  password = password
+    .split('')
+    .sort(() => 0.5 - Math.random())
+    .join('')
+
   registerForm.value.password = password
   registerForm.value.confirmPassword = password
 }
@@ -162,7 +159,7 @@ const validateForm = async (): Promise<boolean> => {
     error.value = '请输入用户名'
     return false
   }
-  
+
   // 检查用户名是否已存在
   const exists = await window.api.user.userExists(registerForm.value.username)
   if (exists) {
@@ -170,24 +167,24 @@ const validateForm = async (): Promise<boolean> => {
     error.value = '用户名已存在'
     return false
   }
-  
+
   // 检查密码
   if (!registerForm.value.password) {
     error.value = '请输入主密码'
     return false
   }
-  
+
   if (registerForm.value.password.length < 8) {
     error.value = '密码长度至少8位'
     return false
   }
-  
+
   // 检查确认密码
   if (registerForm.value.password !== registerForm.value.confirmPassword) {
     error.value = '两次输入的密码不一致'
     return false
   }
-  
+
   return true
 }
 
@@ -195,21 +192,18 @@ const validateForm = async (): Promise<boolean> => {
 const handleRegister = async (): Promise<void> => {
   error.value = ''
   usernameError.value = ''
-  
+
   const isValid = await validateForm()
   if (!isValid) {
     return
   }
-  
+
   loading.value = true
-  
+
   try {
     // 调用API注册用户
-    await window.api.user.registerUser(
-      registerForm.value.username,
-      registerForm.value.password
-    )
-    
+    await window.api.user.registerUser(registerForm.value.username, registerForm.value.password)
+
     // 注册成功，触发事件
     emit('register-success')
   } catch (err) {

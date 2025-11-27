@@ -11,7 +11,7 @@
         <p v-else class="no-username">未设置用户名</p>
       </div>
       <div class="category-tag" v-if="password.group">
-        <Icon :name="getCategoryIcon(password.group)" :width="16" :height="16" />
+        <Icon :name="getCategoryIcon(password.group)" :width="24" :height="24" />
         <span :title="getCategoryName(password.group)">{{ getCategoryName(password.group) }}</span>
       </div>
     </div>
@@ -284,6 +284,15 @@ function isDotActive(index: number): boolean {
 
 .link-icon:hover {
   opacity: 0.8;
+}
+
+.category-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* 子元素之间留有5px的空隙 */
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
 }
 
 .card-title p {

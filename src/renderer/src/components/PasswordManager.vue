@@ -1128,6 +1128,7 @@ body {
 
 .greeting {
   font-style: italic;
+  font-size: 1.1rem;
 }
 
 .username {
