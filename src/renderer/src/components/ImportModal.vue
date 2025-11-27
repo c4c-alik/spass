@@ -27,7 +27,8 @@
           </select>
         </div>
 
-        <div class="form-group">
+        <!-- 隐藏密码输入框，暂时不处理密码相关功能 -->
+        <div class="form-group" style="display: none;">
           <label for="importPassword">数据库密码</label>
           <input
             id="importPassword"
