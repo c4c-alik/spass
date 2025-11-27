@@ -12,6 +12,7 @@ interface PasswordAPI {
   toggleFavorite: (id: number) => Promise<void>
   exportToKdbx: (passwords: any[], masterPassword: string) => Promise<ArrayBuffer>
   importFromKdbx: (fileData: ArrayBuffer, masterPassword: string) => Promise<any[]>
+  getWebsiteFavicon: (url: string) => Promise<string | null>
 }
 
 // 定义 UserAPI 接口
@@ -60,7 +61,9 @@ contextBridge.exposeInMainWorld('api', {
     exportToKdbx: (passwords: any[], masterPassword: string): Promise<ArrayBuffer> =>
       ipcRenderer.invoke('export-to-kdbx', passwords, masterPassword),
     importFromKdbx: (fileData: ArrayBuffer, masterPassword: string): Promise<any[]> =>
-      ipcRenderer.invoke('import-from-kdbx', fileData, masterPassword)
+      ipcRenderer.invoke('import-from-kdbx', fileData, masterPassword),
+    getWebsiteFavicon: (url: string): Promise<string | null> =>
+      ipcRenderer.invoke('get-website-favicon', url)
   },
   user: {
     registerUser: (username: string, password: string): Promise<number | undefined> =>

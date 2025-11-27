@@ -3,7 +3,20 @@
   <div class="password-card card" :class="{ favorited: password.isFavorited }">
     <div class="card-header">
       <div class="icon-container" :style="{ background: password.color }">
-        <Icon :name="password.icon" :width="24" :height="24" />
+        <img 
+          v-if="faviconUrl && !showDefaultIcon" 
+          :src="faviconUrl" 
+          :width="24" 
+          :height="24" 
+          alt="Website Icon"
+          @error="onFaviconError"
+        />
+        <Icon 
+          v-else 
+          :name="password.icon" 
+          :width="24" 
+          :height="24" 
+        />
       </div>
       <div class="card-title">
         <h3>{{ password.service }}</h3>
@@ -57,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import Icon from './Icon.vue'
 
 // 定义组件属性
@@ -93,6 +106,26 @@ const categoryIcons = {
 const showPassword = ref(false) // 控制密码可见性
 const copyStatus = ref('idle') // 复制状态：'idle' | 'copying' | 'success'
 const decryptedPassword = ref('') // 解密后的密码
+const faviconUrl = ref('') // 网站图标URL
+const showDefaultIcon = ref(false) // 是否显示默认图标
+const loadingFavicon = ref(false) // 是否正在加载favicon
+
+// favicon缓存（限制最多缓存50个）
+const faviconCache = new Map<string, string>()
+const MAX_CACHE_SIZE = 50
+
+// 添加到缓存并控制大小
+function addToFaviconCache(key: string, value: string): void {
+  // 如果缓存已满，删除最旧的条目
+  if (faviconCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = faviconCache.keys().next().value
+    if (firstKey) {
+      faviconCache.delete(firstKey)
+    }
+  }
+  
+  faviconCache.set(key, value)
+}
 
 // 计算显示的密码（明文或密文）
 const displayPassword = computed(() => {
@@ -165,6 +198,55 @@ function openLink(url: string): void {
 }
 
 /**
+ * 获取网站favicon
+ * 通过主进程获取，避免CSP限制
+ */
+async function loadFavicon(): Promise<void> {
+  // 防止在短时间内重复请求
+  if (loadingFavicon.value) {
+    return
+  }
+  
+  try {
+    loadingFavicon.value = true
+    
+    if (!props.password.url) {
+      showDefaultIcon.value = true
+      return
+    }
+    
+    // 检查缓存
+    if (faviconCache.has(props.password.url)) {
+      faviconUrl.value = faviconCache.get(props.password.url)!
+      showDefaultIcon.value = false
+      return
+    }
+
+    const url = await window.api.password.getWebsiteFavicon(props.password.url)
+    if (url) {
+      faviconUrl.value = url
+      showDefaultIcon.value = false
+      // 添加到缓存
+      addToFaviconCache(props.password.url, url)
+    } else {
+      showDefaultIcon.value = true
+    }
+  } catch (error) {
+    console.error('获取网站favicon失败:', error)
+    showDefaultIcon.value = true
+  } finally {
+    loadingFavicon.value = false
+  }
+}
+
+/**
+ * 当favicon加载失败时调用
+ */
+function onFaviconError(): void {
+  showDefaultIcon.value = true
+}
+
+/**
  * 切换密码可见性
  * 当用户点击眼睛图标时，如果需要显示明文且尚未解密，则进行解密
  */
@@ -224,6 +306,20 @@ function isDotActive(index: number): boolean {
   }
   return index <= activeDotsMap[props.password.strength]
 }
+
+// 在组件挂载时尝试获取网站图标
+onMounted(() => {
+  loadFavicon()
+})
+
+// 监听password.url的变化
+watch(
+  () => props.password.url,
+  () => {
+    loadFavicon()
+  }
+)
+
 </script>
 
 <style scoped>
