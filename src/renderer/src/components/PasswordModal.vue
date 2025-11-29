@@ -127,7 +127,8 @@ export default defineComponent({
         password: '',
         url: '',
         category: '',
-        group: ''
+        group: '',
+        favicon: ''
       },
       showPassword: false, // 控制密码可见性状态
       predefinedCategories: [
@@ -195,7 +196,8 @@ export default defineComponent({
               username: this.password.username || '',
               password: password,
               url: this.password.url || '',
-              group: this.password.group || ''
+              group: this.password.group || '',
+              favicon: this.password.favicon || ''
             }
           } else {
             // 添加模式：重置表单
@@ -213,11 +215,21 @@ export default defineComponent({
     closeModal() {
       this.$emit('close')
     },
-    savePassword() {
+    async savePassword() {
       // 验证必填字段
       if (!this.formData.title || !this.formData.username || !this.formData.password) {
         console.error('请填写所有必填字段')
         return
+      }
+
+      // 如果有网址但没有favicon，则尝试获取favicon
+      if (this.formData.url && !this.formData.favicon) {
+        try {
+          this.formData.favicon =
+            (await window.api.password.getWebsiteFavicon(this.formData.url)) || ''
+        } catch (error) {
+          console.error('获取网站图标失败:', error)
+        }
       }
 
       // 准备保存的数据
@@ -227,7 +239,8 @@ export default defineComponent({
         password: this.formData.password,
         url: this.formData.url || '',
         group: this.formData.group,
-        strength: this.passwordStrength
+        strength: this.passwordStrength,
+        favicon: this.formData.favicon
       }
 
       // 如果是编辑模式且有原始密码对象，包含ID
@@ -248,7 +261,8 @@ export default defineComponent({
         username: '',
         password: '',
         url: '',
-        group: ''
+        group: '',
+        favicon: ''
       }
     },
     generatePassword() {
