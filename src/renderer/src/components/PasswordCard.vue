@@ -210,6 +210,13 @@ async function loadFavicon(): Promise<void> {
   try {
     loadingFavicon.value = true
     
+    // 如果密码记录中已经有favicon数据，直接使用
+    if (props.password.favicon) {
+      faviconUrl.value = props.password.favicon
+      showDefaultIcon.value = false
+      return
+    }
+    
     if (!props.password.url) {
       showDefaultIcon.value = true
       return

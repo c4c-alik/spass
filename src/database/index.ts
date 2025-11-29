@@ -15,6 +15,7 @@ export interface PasswordEntry {
   isFavorited?: boolean
   createdAt?: string
   updatedAt?: string
+  favicon?: string
 }
 
 // 定义数据库操作结果类型
@@ -115,6 +116,7 @@ class PasswordDatabase {
         group TEXT DEFAULT 'other',
         notes TEXT,
         strength TEXT DEFAULT 'medium',
+        favicon TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -133,8 +135,8 @@ class PasswordDatabase {
     try {
       const db = await this.init()
       const result = await db.run(
-        `INSERT INTO passwords (service, username, password, url, "group", notes, strength)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO passwords (service, username, password, url, "group", notes, strength, favicon)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           password.service,
           password.username,
@@ -142,7 +144,8 @@ class PasswordDatabase {
           password.url || null,
           password.group || 'other',
           password.notes || null,
-          password.strength || 'medium'
+          password.strength || 'medium',
+          password.favicon || null
         ]
       )
       return result.lastID
@@ -157,7 +160,7 @@ class PasswordDatabase {
     try {
       const db = await this.init()
       return db.all<PasswordEntry>(`
-        SELECT id, service, username, password, url, "group", notes, strength,
+        SELECT id, service, username, password, url, "group", notes, strength, favicon,
                datetime(created_at) as createdAt,
                datetime(updated_at) as updatedAt
         FROM passwords
@@ -185,7 +188,8 @@ class PasswordDatabase {
           url = ?,
           "group" = ?,
           notes = ?,
-          strength = ?
+          strength = ?,
+          favicon = ?
         WHERE id = ?`,
         [
           password.service,
@@ -195,6 +199,7 @@ class PasswordDatabase {
           password.group || 'other',
           password.notes || null,
           password.strength || 'medium',
+          password.favicon || null,
           id
         ]
       )
@@ -230,7 +235,7 @@ class PasswordDatabase {
       const db = await this.init()
       const query = `%${searchTerm}%`
       return db.all<PasswordEntry>(`
-        SELECT id, service, username, password, url, "group", notes, strength,
+        SELECT id, service, username, password, url, "group", notes, strength, favicon,
                datetime(created_at) as createdAt,
                datetime(updated_at) as updatedAt
         FROM passwords
