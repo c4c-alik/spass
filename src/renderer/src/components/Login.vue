@@ -17,6 +17,7 @@
             :placeholder="isLockScreen ? '请输入用户名' : '请输入用户名'"
             :disabled="isLockScreen"
             required
+            spellcheck="false"
           />
         </div>
 
@@ -29,6 +30,7 @@
             placeholder="请输入主密码"
             required
             ref="passwordInput"
+            spellcheck="false"
           />
         </div>
 

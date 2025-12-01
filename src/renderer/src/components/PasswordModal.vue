@@ -28,6 +28,7 @@
             type="text"
             placeholder="输入用户名或邮箱"
             required
+            spellcheck="false"
           />
         </div>
 
