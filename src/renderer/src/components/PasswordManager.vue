@@ -49,6 +49,7 @@
           type="text"
           placeholder="搜索密码..."
           @input="searchPasswords"
+          spellcheck="false"
         />
         <button type="button">
           <Icon name="search" :width="24" :height="24" />

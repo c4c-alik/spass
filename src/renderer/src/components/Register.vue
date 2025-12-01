@@ -16,6 +16,7 @@
             type="text"
             placeholder="请输入用户名"
             required
+            spellcheck="false"
           />
           <div v-if="usernameError" class="field-error">
             {{ usernameError }}
@@ -31,6 +32,7 @@
               :type="showPassword ? 'text' : 'password'"
               placeholder="请输入主密码"
               required
+              spellcheck="false"
             />
             <button type="button" class="toggle-password" @click="togglePasswordVisibility">
               <Icon :name="showPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />
@@ -48,6 +50,7 @@
               :type="showConfirmPassword ? 'text' : 'password'"
               placeholder="请再次输入主密码"
               required
+              spellcheck="false"
             />
             <button type="button" class="toggle-password" @click="toggleConfirmPasswordVisibility">
               <Icon :name="showConfirmPassword ? 'eye-off' : 'eye'" :width="24" :height="24" />

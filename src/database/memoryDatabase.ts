@@ -23,7 +23,7 @@ export class MemoryDatabase {
 
   /**
    * 初始化内存数据库
-   * 创建内存数据库实例并初始化密码表
+   * 创建内存数据库实例并初始化所有表
    * @returns Promise<void>
    */
   async init(): Promise<void> {
@@ -32,31 +32,11 @@ export class MemoryDatabase {
         if (err) {
           reject(err)
         } else {
-          // 创建密码表，添加 is_favorited 字段用于支持收藏功能
-          this.db!.run(
-            `
-            CREATE TABLE IF NOT EXISTS passwords (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              service TEXT NOT NULL,
-              username TEXT NOT NULL,
-              password TEXT NOT NULL,
-              url TEXT,
-              "group" TEXT DEFAULT 'other',
-              notes TEXT,
-              strength TEXT DEFAULT 'medium',
-              is_favorited INTEGER DEFAULT 0,
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-          `,
-            (err) => {
-              if (err) {
-                reject(err)
-              } else {
-                resolve()
-              }
-            }
-          )
+          // 初始化数据库表
+          this.createPasswordsTable()
+            .then(() => this.createFaviconsTable())
+            .then(() => resolve())
+            .catch(reject)
         }
       })
     })
@@ -90,9 +70,10 @@ export class MemoryDatabase {
           // 检查源表是否有 is_favorited 字段，以确保向后兼容性
           this.db!.get(
             `
-            SELECT sql FROM temp_db.sqlite_master
-            WHERE type='table' AND name='passwords'
-          `,
+              SELECT sql
+              FROM temp_db.sqlite_master
+              WHERE type ='table' AND name ='passwords'
+            `,
             (err, row: { sql: string } | undefined) => {
               if (err) {
                 reject(err)
@@ -101,52 +82,28 @@ export class MemoryDatabase {
                 const hasFavoriteColumn = row && row.sql.includes('is_favorited')
                 const hasGroupColumn = row && row.sql.includes('group')
 
-                if (hasFavoriteColumn) {
-                  // 如果源表有 is_favorited 字段，直接复制所有数据
-                  this.db!.run(
-                    `
-                  INSERT INTO passwords
-                  SELECT * FROM temp_db.passwords
-                `,
-                    async (err) => {
-                      if (err) {
-                        reject(err)
-                      } else {
-                        // 删除临时文件
-                        try {
-                          await fs.unlink(tempPath)
-                        } catch (unlinkErr) {
-                          console.warn('Failed to delete temporary database file:', unlinkErr)
-                        }
-                        resolve()
-                      }
+                // 复制密码表数据
+                this.copyPasswordsFromTempDb(hasFavoriteColumn)
+                  .then(() => {
+                    // 复制favicons表数据
+                    return this.copyFaviconsFromTempDb()
+                  })
+                  .then(async () => {
+                    // 删除临时文件
+                    try {
+                      await fs.unlink(tempPath)
+                    } catch (unlinkErr) {
+                      console.warn('Failed to delete temporary database file:', unlinkErr)
                     }
-                  )
-                } else {
-                  // 如果源表没有 is_favorited 字段，则显式列出所有字段
-                  // 这里需要确保字段列表是最新的
-                  this.db!.run(
-                    `
-                  INSERT INTO passwords
-                  (id, service, username, password, url, "group", notes, strength, is_favorited, created_at, updated_at)
-                  SELECT id, service, username, password, url, "group", notes, strength, 0, created_at, updated_at
-                  FROM temp_db.passwords
-                `,
-                    async (err) => {
-                      if (err) {
-                        reject(err)
-                      } else {
-                        // 删除临时文件
-                        try {
-                          await fs.unlink(tempPath)
-                        } catch (unlinkErr) {
-                          console.warn('Failed to delete temporary database file:', unlinkErr)
-                        }
-                        resolve()
-                      }
-                    }
-                  )
-                }
+                    resolve()
+                  })
+                  .catch((err) => {
+                    console.warn('Failed to copy tables:', err)
+                    // 删除临时文件
+                    fs.unlink(tempPath)
+                      .catch(unlinkErr => console.warn('Failed to delete temporary database file:', unlinkErr))
+                      .finally(() => resolve())
+                  })
               }
             }
           )
@@ -179,87 +136,30 @@ export class MemoryDatabase {
           reject(err)
         } else {
           // 在临时数据库中创建表
-          tempDb.run(
-            `
-            CREATE TABLE passwords (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              service TEXT NOT NULL,
-              username TEXT NOT NULL,
-              password TEXT NOT NULL,
-              url TEXT,
-              "group" TEXT DEFAULT 'other',
-              notes TEXT,
-              strength TEXT DEFAULT 'medium',
-              is_favorited INTEGER DEFAULT 0,
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-          `,
-            (err) => {
-              if (err) {
-                reject(err)
-              } else {
-                // 从内存数据库复制数据到临时数据库
-                const exportStmt = tempDb.prepare(`
-                INSERT INTO passwords
-                (id, service, username, password, url, "group", notes, strength, is_favorited, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-              `)
-
-                this.db!.each(
-                  `
-                SELECT id, service, username, password, url, "group", notes, strength, is_favorited, created_at, updated_at
-                FROM passwords
-              `,
-                  (err, row: DatabasePasswordEntry) => {
-                    if (err) {
-                      console.error('Error reading from memory database:', err)
-                    } else {
-                      exportStmt.run(
-                        [
-                          row.id,
-                          row.service,
-                          row.username,
-                          row.password,
-                          row.url,
-                          row.group,
-                          row.notes,
-                          row.strength,
-                          row.is_favorited,
-                          row.created_at,
-                          row.updated_at
-                        ],
-                        (err) => {
-                          if (err) {
-                            console.error('Error writing to temp database:', err)
-                          }
-                        }
-                      )
-                    }
-                  },
-                  (err) => {
-                    if (err) {
-                      reject(err)
-                    } else {
-                      exportStmt.finalize(() => {
-                        tempDb.close(async () => {
-                          try {
-                            // 读取临时数据库文件内容
-                            const buffer = await fs.readFile(tempPath)
-                            // 删除临时文件
-                            await fs.unlink(tempPath)
-                            resolve(buffer)
-                          } catch (readErr) {
-                            reject(readErr)
-                          }
-                        })
-                      })
-                    }
-                  }
-                )
-              }
-            }
-          )
+          this.createPasswordsTableInTempDb(tempDb)
+            .then(() => this.createFaviconsTableInTempDb(tempDb))
+            .then(() => {
+              // 从内存数据库复制密码数据到临时数据库
+              return this.exportPasswordsToTempDb(tempDb)
+            })
+            .then(() => {
+              // 从内存数据库复制favicon数据到临时数据库
+              return this.exportFaviconsToTempDb(tempDb)
+            })
+            .then(() => {
+              tempDb.close(async () => {
+                try {
+                  // 读取临时数据库文件内容
+                  const buffer = await fs.readFile(tempPath)
+                  // 删除临时文件
+                  await fs.unlink(tempPath)
+                  resolve(buffer)
+                } catch (readErr) {
+                  reject(readErr)
+                }
+              })
+            })
+            .catch(reject)
         }
       })
     })
@@ -276,8 +176,19 @@ export class MemoryDatabase {
 
     return new Promise((resolve, reject) => {
       this.db!.all<DatabasePasswordEntry>(
-        `SELECT id, service, username, password, url, "group", notes, strength, is_favorited as is_favorited, created_at, updated_at
-         FROM passwords ORDER BY service`,
+        `SELECT id,
+                service,
+                username,
+                password,
+                url,
+                "group",
+                notes,
+                strength,
+                is_favorited as is_favorited,
+                created_at,
+                updated_at
+         FROM passwords
+         ORDER BY service`,
         (err, rows) => {
           if (err) {
             reject(err)
@@ -322,7 +233,7 @@ export class MemoryDatabase {
           password.strength || 'medium',
           password.isFavorited ? 1 : 0
         ],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err)
           } else {
@@ -346,7 +257,7 @@ export class MemoryDatabase {
 
     // 使用传统回调方式而非promisify，以确保能正确访问this.changes
     return new Promise((resolve, reject) => {
-      this.db!.run('DELETE FROM passwords WHERE id = ?', [id], function(err) {
+      this.db!.run('DELETE FROM passwords WHERE id = ?', [id], function (err) {
         if (err) {
           reject(err)
         } else {
@@ -371,16 +282,16 @@ export class MemoryDatabase {
     // 使用传统回调方式而非promisify，以确保能正确访问this.changes
     return new Promise((resolve, reject) => {
       this.db!.run(
-        `UPDATE passwords SET
-          service = ?,
-          username = ?,
-          password = ?,
-          url = ?,
-          "group" = ?,
-          notes = ?,
-          strength = ?,
-          is_favorited = ?
-        WHERE id = ?`,
+        `UPDATE passwords
+         SET service      = ?,
+             username     = ?,
+             password     = ?,
+             url          = ?,
+             "group"      = ?,
+             notes        = ?,
+             strength     = ?,
+             is_favorited = ?
+         WHERE id = ?`,
         [
           password.service,
           password.username,
@@ -392,7 +303,7 @@ export class MemoryDatabase {
           password.isFavorited ? 1 : 0,
           id
         ],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err)
           } else {
@@ -417,8 +328,21 @@ export class MemoryDatabase {
     return new Promise((resolve, reject) => {
       const query = `%${searchTerm}%`
       this.db!.all<DatabasePasswordEntry>(
-        `SELECT id, service, username, password, url, "group", notes, strength, is_favorited as is_favorited, created_at, updated_at
-         FROM passwords WHERE service LIKE ? OR username LIKE ? ORDER BY service`,
+        `SELECT id,
+                service,
+                username,
+                password,
+                url,
+                "group",
+                notes,
+                strength,
+                is_favorited as is_favorited,
+                created_at,
+                updated_at
+         FROM passwords
+         WHERE service LIKE ?
+            OR username LIKE ?
+         ORDER BY service`,
         [query, query],
         (err, rows) => {
           if (err) {
@@ -468,11 +392,95 @@ export class MemoryDatabase {
       this.db!.run(
         'UPDATE passwords SET is_favorited = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [newFavoriteStatus, id],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err)
           } else {
             resolve()
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 获取存储的网站favicon
+   * @param url 网站URL
+   * @returns Promise<string | null>
+   */
+  async getStoredFavicon(url: string): Promise<string | null> {
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
+
+    if (!url) return null
+
+    return new Promise((resolve, reject) => {
+      this.db!.get(
+        'SELECT favicon_data FROM favicons WHERE url = ?',
+        [url],
+        (err, row: { favicon_data: string } | undefined) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(row ? row.favicon_data : null)
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 保存网站favicon
+   * @param url 网站URL
+   * @param faviconData favicon数据（base64编码）
+   * @returns Promise<void>
+   */
+  async saveWebsiteFavicon(url: string, faviconData: string): Promise<void> {
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
+
+    if (!url || !faviconData) return
+
+    return new Promise((resolve, reject) => {
+      // 使用 INSERT OR REPLACE 确保URL唯一性
+      this.db!.run(
+        `
+          INSERT
+          OR REPLACE INTO favicons (url, favicon_data, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        `,
+        [url, faviconData],
+        function (err) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 获取所有favicon数据
+   * @returns Promise<Array<{url: string, favicon_data: string, updated_at: string}>>
+   */
+  async getAllFavicons(): Promise<Array<{url: string, favicon_data: string, updated_at: string}>> {
+    if (!this.db) {
+      throw new Error('Database not initialized')
+    }
+
+    return new Promise((resolve, reject) => {
+      this.db!.all(
+        'SELECT url, favicon_data, updated_at FROM favicons',
+        [],
+        (err, rows: Array<{url: string, favicon_data: string, updated_at: string}>) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows)
           }
         }
       )
@@ -496,6 +504,378 @@ export class MemoryDatabase {
         })
       })
     }
+  }
+
+  /**
+   * 在临时数据库中创建密码表
+   * @param tempDb 临时数据库连接
+   * @returns Promise<void>
+   */
+  private createPasswordsTableInTempDb(tempDb: Database.Database): Promise<void> {
+    return new Promise((resolve, reject) => {
+      tempDb.run(
+        `
+          CREATE TABLE passwords
+          (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            service      TEXT NOT NULL,
+            username     TEXT NOT NULL,
+            password     TEXT NOT NULL,
+            url          TEXT,
+            "group"      TEXT     DEFAULT 'other',
+            notes        TEXT,
+            strength     TEXT     DEFAULT 'medium',
+            is_favorited INTEGER  DEFAULT 0,
+            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `,
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 在临时数据库中创建网站图标表
+   * @param tempDb 临时数据库连接
+   * @returns Promise<void>
+   */
+  private createFaviconsTableInTempDb(tempDb: Database.Database): Promise<void> {
+    return new Promise((resolve, reject) => {
+      tempDb.run(
+        `
+          CREATE TABLE favicons
+          (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            url          TEXT NOT NULL UNIQUE,
+            favicon_data TEXT NOT NULL,
+            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `,
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 从临时数据库复制网站图标表数据
+   * @returns Promise<void>
+   */
+  private copyFaviconsFromTempDb(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db!.run(
+        `
+          INSERT INTO favicons
+          SELECT *
+          FROM temp_db.favicons
+        `,
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 从临时数据库复制密码表数据
+   * @returns Promise<void>
+   */
+  private copyPasswordsFromTempDb(hasFavoriteColumn: boolean): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (hasFavoriteColumn) {
+        // 如果源表有 is_favorited 字段，直接复制所有数据
+        this.db!.run(
+          `
+            INSERT INTO passwords
+            SELECT *
+            FROM temp_db.passwords
+          `,
+          (err) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve()
+            }
+          }
+        )
+      } else {
+        // 如果源表没有 is_favorited 字段，则显式列出所有字段
+        this.db!.run(
+          `
+            INSERT INTO passwords
+            (id, service, username, password, url, "group", notes, strength, is_favorited, created_at,
+             updated_at)
+            SELECT id,
+                   service,
+                   username,
+                   password,
+                   url,
+                   "group",
+                   notes,
+                   strength,
+                   0,
+                   created_at,
+                   updated_at
+            FROM temp_db.passwords
+          `,
+          (err) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve()
+            }
+          }
+        )
+      }
+    })
+  }
+
+  /**
+   * 将内存数据库中的密码数据导出到临时数据库
+   * @param tempDb 临时数据库连接
+   * @returns Promise<void>
+   */
+  private exportPasswordsToTempDb(tempDb: Database.Database): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // 从内存数据库复制密码数据到临时数据库
+      const exportStmt = tempDb.prepare(`
+        INSERT INTO passwords
+        (id, service, username, password, url, "group", notes, strength, is_favorited, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+
+      this.db!.each(
+        `
+          SELECT id,
+                 service,
+                 username,
+                 password,
+                 url,
+                 "group",
+                 notes,
+                 strength,
+                 is_favorited,
+                 created_at,
+                 updated_at
+          FROM passwords
+        `,
+        (err, row: DatabasePasswordEntry) => {
+          if (err) {
+            console.error('Error reading from memory database:', err)
+          } else {
+            exportStmt.run(
+              [
+                row.id,
+                row.service,
+                row.username,
+                row.password,
+                row.url,
+                row.group,
+                row.notes,
+                row.strength,
+                row.is_favorited,
+                row.created_at,
+                row.updated_at
+              ],
+              (err) => {
+                if (err) {
+                  console.error('Error writing to temp database:', err)
+                }
+              }
+            )
+          }
+        },
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            exportStmt.finalize(() => resolve())
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 将内存数据库中的网站图标数据导出到临时数据库
+   * @param tempDb 临时数据库连接
+   * @returns Promise<void>
+   */
+  private exportFaviconsToTempDb(tempDb: Database.Database): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // 从内存数据库复制favicon数据到临时数据库
+      const faviconExportStmt = tempDb.prepare(`
+        INSERT INTO favicons
+        (id, url, favicon_data, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+      `)
+
+      this.db!.each(
+        `
+          SELECT id,
+                 url,
+                 favicon_data,
+                 created_at,
+                 updated_at
+          FROM favicons
+        `,
+        (err, row: {id: number, url: string, favicon_data: string, created_at: string, updated_at: string}) => {
+          if (err) {
+            console.error('Error reading favicons from memory database:', err)
+          } else {
+            faviconExportStmt.run(
+              [
+                row.id,
+                row.url,
+                row.favicon_data,
+                row.created_at,
+                row.updated_at
+              ],
+              (err) => {
+                if (err) {
+                  console.error('Error writing favicon to temp database:', err)
+                }
+              }
+            )
+          }
+        },
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            faviconExportStmt.finalize(() => resolve())
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 创建密码表
+   * @returns Promise<void>
+   */
+  private createPasswordsTable(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // 创建密码表，添加 is_favorited 字段用于支持收藏功能
+      this.db!.run(
+        `
+          CREATE TABLE IF NOT EXISTS passwords
+          (
+            id
+            INTEGER
+            PRIMARY
+            KEY
+            AUTOINCREMENT,
+            service
+            TEXT
+            NOT
+            NULL,
+            username
+            TEXT
+            NOT
+            NULL,
+            password
+            TEXT
+            NOT
+            NULL,
+            url
+            TEXT,
+            "group"
+            TEXT
+            DEFAULT
+            'other',
+            notes
+            TEXT,
+            strength
+            TEXT
+            DEFAULT
+            'medium',
+            is_favorited
+            INTEGER
+            DEFAULT
+            0,
+            created_at
+            DATETIME
+            DEFAULT
+            CURRENT_TIMESTAMP,
+            updated_at
+            DATETIME
+            DEFAULT
+            CURRENT_TIMESTAMP
+          )
+        `,
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * 创建网站favicon存储表
+   * @returns Promise<void>
+   */
+  private createFaviconsTable(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // 创建网站favicon存储表
+      this.db!.run(
+        `
+          CREATE TABLE IF NOT EXISTS favicons
+          (
+            id
+            INTEGER
+            PRIMARY
+            KEY
+            AUTOINCREMENT,
+            url
+            TEXT
+            NOT
+            NULL
+            UNIQUE,
+            favicon_data
+            TEXT
+            NOT
+            NULL,
+            created_at
+            DATETIME
+            DEFAULT
+            CURRENT_TIMESTAMP,
+            updated_at
+            DATETIME
+            DEFAULT
+            CURRENT_TIMESTAMP
+          )
+        `,
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
   }
 }
 
