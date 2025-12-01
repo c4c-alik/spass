@@ -2,20 +2,20 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import UserDatabase from '../database/userDatabase'
+import { UsersTable } from '../database/tables/usersTable'
 import { encryptionManager } from '../utils/encryption'
-import { MemoryDatabase } from '../database/memoryDatabase'
+import { MemoryDatabase } from '../database'
 import fetch from 'node-fetch'
 
 // 设置应用区域和语言
 app.commandLine.appendSwitch('lang', 'zh-CN')
 app.commandLine.appendSwitch('locale', 'zh-CN')
 
-let userDb: UserDatabase
 let memoryDb: MemoryDatabase
 let autoLockTimeout: NodeJS.Timeout | null = null
 let autoLockTime = 30 * 60 * 1000 // 默认30分钟
 let mainWindow: BrowserWindow | null = null
+const userDbPath = join(app.getPath('userData'), 'users.db')
 
 function createWindow(): void {
   // Create the browser window.
@@ -67,7 +67,6 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   // 初始化数据库
-  userDb = new UserDatabase()
   memoryDb = new MemoryDatabase()
 
   createWindow()
@@ -103,7 +102,6 @@ app.on('before-quit', async (event) => {
   try {
     // 在退出前保存内存数据库到加密文件
     await saveMemoryDbToEncryptedFile()
-    await userDb.close()
     await memoryDb.close()
   } catch (error) {
     console.error('Error during app quit:', error)
@@ -491,55 +489,72 @@ ipcMain.handle('search-passwords', async (_event, query) => {
 
 // 用户认证相关IPC处理
 ipcMain.handle('register-user', async (_event, username, password) => {
-  return await userDb.registerUser(username, password)
+  try {
+    const db = await UsersTable.initialize(userDbPath)
+    return await UsersTable.registerUser(db, username, password)
+  } catch (error) {
+    console.error('Failed to register user:', error)
+    throw error
+  }
 })
 
 ipcMain.handle('validate-user', async (_event, username, password) => {
-  const isValid = await userDb.validateUser(username, password)
+  try {
+    const db = await UsersTable.initialize(userDbPath)
+    const isValid = await UsersTable.validateUser(db, username, password)
 
-  if (isValid) {
-    try {
-      // 获取用户信息以获取用户ID
-      const db = await userDb.init()
-      const user = await db.get<any>('SELECT id FROM users WHERE username = ?', [username])
+    if (isValid) {
+      try {
+        // 获取用户信息以获取用户ID
+        const user = await db.get<any>('SELECT id FROM users WHERE username = ?', [username])
 
-      if (user) {
-        // 设置用户ID，用于创建用户特定的加密数据库文件
-        encryptionManager.setUserId(user.id.toString())
+        if (user) {
+          // 设置用户ID，用于创建用户特定的加密数据库文件
+          encryptionManager.setUserId(user.id.toString())
 
-        // 设置主密钥
-        await encryptionManager.setMasterKey(password)
+          // 设置主密钥
+          await encryptionManager.setMasterKey(password)
 
-        // 初始化内存数据库
-        await memoryDb.init()
+          // 初始化内存数据库
+          await memoryDb.init()
 
-        // 尝试加载已有的加密数据库
-        try {
-          const exists = await encryptionManager.encryptedDatabaseExists()
-          if (exists) {
-            const dbBuffer = await encryptionManager.loadEncryptedDatabase()
-            if (dbBuffer.length > 0) {
-              await memoryDb.loadFromBuffer(dbBuffer)
+          // 尝试加载已有的加密数据库
+          try {
+            const exists = await encryptionManager.encryptedDatabaseExists()
+            if (exists) {
+              const dbBuffer = await encryptionManager.loadEncryptedDatabase()
+              if (dbBuffer.length > 0) {
+                await memoryDb.loadFromBuffer(dbBuffer)
+              }
             }
+          } catch (error) {
+            console.error('Failed to load encrypted database:', error)
           }
-        } catch (error) {
-          console.error('Failed to load encrypted database:', error)
+
+          // 设置自动锁定
+          setupAutoLock()
         }
-
-        // 设置自动锁定
-        setupAutoLock()
+      } catch (error) {
+        console.error('Error during user session initialization:', error)
+        throw error
       }
-    } catch (error) {
-      console.error('Error during user session initialization:', error)
-      throw error
     }
-  }
 
-  return isValid
+    return isValid
+  } catch (error) {
+    console.error('Failed to validate user:', error)
+    throw error
+  }
 })
 
 ipcMain.handle('user-exists', async (_event, username) => {
-  return await userDb.userExists(username)
+  try {
+    const db = await UsersTable.initialize(userDbPath)
+    return await UsersTable.userExists(db, username)
+  } catch (error) {
+    console.error('Failed to check if user exists:', error)
+    throw error
+  }
 })
 
 // 手动锁定应用
