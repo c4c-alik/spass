@@ -3,20 +3,15 @@
   <div class="password-card card" :class="{ favorited: password.isFavorited }">
     <div class="card-header">
       <div class="icon-container" :style="{ background: password.color }">
-        <img 
-          v-if="faviconUrl && !showDefaultIcon" 
-          :src="faviconUrl" 
-          :width="24" 
-          :height="24" 
+        <img
+          v-if="faviconUrl && !showDefaultIcon"
+          :src="faviconUrl"
+          :width="24"
+          :height="24"
           alt="Website Icon"
           @error="onFaviconError"
         />
-        <Icon 
-          v-else 
-          :name="password.icon" 
-          :width="24" 
-          :height="24" 
-        />
+        <Icon v-else :name="password.icon" :width="24" :height="24" />
       </div>
       <div class="card-title">
         <h3>{{ password.service }}</h3>
@@ -81,6 +76,13 @@ const props = defineProps({
   }
 })
 
+// 定义响应式数据
+const faviconUrl = ref('') // 网站favicon数据(base64)
+const showDefaultIcon = ref(false) // 是否显示默认图标
+const loadingFavicon = ref(false) // 是否正在加载favicon
+const faviconCache = new Map<string, string>() // favicon缓存
+const MAX_CACHE_SIZE = 50 // 缓存大小限制
+
 // 定义事件发射器
 const emit = defineEmits(['edit', 'delete', 'toggle-favorite'])
 
@@ -106,13 +108,8 @@ const categoryIcons = {
 const showPassword = ref(false) // 控制密码可见性
 const copyStatus = ref('idle') // 复制状态：'idle' | 'copying' | 'success'
 const decryptedPassword = ref('') // 解密后的密码
-const faviconUrl = ref('') // 网站图标URL
-const showDefaultIcon = ref(false) // 是否显示默认图标
-const loadingFavicon = ref(false) // 是否正在加载favicon
 
 // favicon缓存（限制最多缓存50个）
-const faviconCache = new Map<string, string>()
-const MAX_CACHE_SIZE = 50
 
 // 添加到缓存并控制大小
 function addToFaviconCache(key: string, value: string): void {
@@ -123,7 +120,7 @@ function addToFaviconCache(key: string, value: string): void {
       faviconCache.delete(firstKey)
     }
   }
-  
+
   faviconCache.set(key, value)
 }
 
@@ -206,15 +203,15 @@ async function loadFavicon(): Promise<void> {
   if (loadingFavicon.value) {
     return
   }
-  
+
   try {
     loadingFavicon.value = true
-    
+
     if (!props.password.url) {
       showDefaultIcon.value = true
       return
     }
-    
+
     // 检查缓存
     if (faviconCache.has(props.password.url)) {
       faviconUrl.value = faviconCache.get(props.password.url)!
@@ -222,12 +219,24 @@ async function loadFavicon(): Promise<void> {
       return
     }
 
-    const url = await window.api.password.getWebsiteFavicon(props.password.url)
-    if (url) {
-      faviconUrl.value = url
+    // 首先尝试从数据库获取favicon
+    let faviconData = await window.api.password.getStoredFavicon(props.password.url)
+
+    // 如果数据库中没有，则动态获取
+    if (!faviconData) {
+      faviconData = await window.api.password.getWebsiteFavicon(props.password.url)
+
+      // 动态获取成功后，保存到数据库
+      if (faviconData) {
+        await window.api.password.saveWebsiteFavicon(props.password.url, faviconData)
+      }
+    }
+
+    if (faviconData) {
+      faviconUrl.value = faviconData
       showDefaultIcon.value = false
       // 添加到缓存
-      addToFaviconCache(props.password.url, url)
+      addToFaviconCache(props.password.url, faviconData)
     } else {
       showDefaultIcon.value = true
     }
@@ -319,7 +328,6 @@ watch(
     loadFavicon()
   }
 )
-
 </script>
 
 <style scoped>

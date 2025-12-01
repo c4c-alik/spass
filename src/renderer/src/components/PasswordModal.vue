@@ -100,6 +100,32 @@
 import { defineComponent } from 'vue'
 import Icon from './Icon.vue'
 
+// 添加 faviconData 获取相关方法
+async function getFaviconData(url: string): Promise<string | null> {
+  if (!url) return null
+
+  try {
+    // 首先检查是否已经有 faviconData
+    const cachedFavicon = await window.api.password.getStoredFavicon(url)
+    if (cachedFavicon) {
+      return cachedFavicon
+    }
+
+    // 如果没有，尝试获取
+    const favicon = await window.api.password.getWebsiteFavicon(url)
+    if (favicon) {
+      // 成功获取后，存储到数据库
+      await window.api.password.saveWebsiteFavicon(url, favicon)
+      return favicon
+    }
+
+    return null
+  } catch (error) {
+    console.error('获取网站favicon失败:', error)
+    return null
+  }
+}
+
 export default defineComponent({
   name: 'PasswordModal',
   components: {
@@ -229,6 +255,11 @@ export default defineComponent({
         url: this.formData.url || '',
         group: this.formData.group,
         strength: this.passwordStrength
+      }
+
+      // 获取并保存favicon
+      if (this.formData.url) {
+        getFaviconData(this.formData.url)
       }
 
       // 如果是编辑模式且有原始密码对象，包含ID

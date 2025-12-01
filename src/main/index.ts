@@ -72,7 +72,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  app.on('activate', function() {
+  app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -627,7 +627,7 @@ ipcMain.handle('get-website-favicon', async (_event, url) => {
     }
 
     const urlObj = new URL(url)
-    
+
     // 多种备选方案获取favicon
     const faviconUrls = [
       // 直接从网站根目录获取
@@ -653,24 +653,26 @@ ipcMain.handle('get-website-favicon', async (_event, url) => {
             signal: controller.signal,
             timeout: 5000
           })
-          
+
           if (response.ok) {
             // 检查内容长度，避免获取过大的文件
             const contentLength = response.headers.get('content-length')
-            if (contentLength && parseInt(contentLength) > 1024 * 1024) { // 1MB限制
+            if (contentLength && parseInt(contentLength) > 1024 * 1024) {
+              // 1MB限制
               console.warn(`Favicon too large: ${faviconUrl}`)
               continue
             }
-            
+
             // 获取图片数据并转换为base64
             const buffer = await response.arrayBuffer()
-            
+
             // 检查实际数据大小
-            if (buffer.byteLength > 1024 * 1024) { // 1MB限制
+            if (buffer.byteLength > 1024 * 1024) {
+              // 1MB限制
               console.warn(`Favicon too large: ${faviconUrl}`)
               continue
             }
-            
+
             const base64 = Buffer.from(buffer).toString('base64')
             const mimeType = response.headers.get('content-type') || 'image/x-icon'
             clearTimeout(timeout)
@@ -688,12 +690,46 @@ ipcMain.handle('get-website-favicon', async (_event, url) => {
     } finally {
       clearTimeout(timeout)
     }
-    
+
     // 如果所有URL都失败，返回null
     console.log(`Failed to load favicon for: ${url}`)
     return null
   } catch (error) {
     console.error('获取网站favicon失败:', error)
     return null
+  }
+})
+
+// 获取存储的favicon
+ipcMain.handle('get-stored-favicon', async (_event, url) => {
+  if (!url) return null
+
+  try {
+    return await memoryDb.getStoredFavicon(url)
+  } catch (error) {
+    console.error('获取存储的favicon失败:', error)
+    return null
+  }
+})
+
+// 保存网站favicon
+ipcMain.handle('save-website-favicon', async (_event, url, faviconData) => {
+  if (!url || !faviconData) return
+
+  try {
+    await memoryDb.saveWebsiteFavicon(url, faviconData)
+  } catch (error) {
+    console.error('保存网站favicon失败:', error)
+  }
+})
+
+// 获取所有favicon数据
+ipcMain.handle('get-all-favicons', async () => {
+  try {
+    const favicons = await memoryDb.getAllFavicons()
+    return favicons
+  } catch (error) {
+    console.error('获取所有favicon数据失败:', error)
+    return []
   }
 })

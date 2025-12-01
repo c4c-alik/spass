@@ -13,6 +13,9 @@ interface PasswordAPI {
   exportToKdbx: (passwords: any[], masterPassword: string) => Promise<ArrayBuffer>
   importFromKdbx: (fileData: ArrayBuffer, masterPassword: string) => Promise<any[]>
   getWebsiteFavicon: (url: string) => Promise<string | null>
+  getStoredFavicon: (url: string) => Promise<string | null>;
+  saveWebsiteFavicon: (url: string, faviconData: string) => Promise<void>;
+  getAllFavicons: () => Promise<Array<{url: string, favicon_data: string, updated_at: string}>>;
 }
 
 // 定义 UserAPI 接口
@@ -63,7 +66,13 @@ contextBridge.exposeInMainWorld('api', {
     importFromKdbx: (fileData: ArrayBuffer, masterPassword: string): Promise<any[]> =>
       ipcRenderer.invoke('import-from-kdbx', fileData, masterPassword),
     getWebsiteFavicon: (url: string): Promise<string | null> =>
-      ipcRenderer.invoke('get-website-favicon', url)
+      ipcRenderer.invoke('get-website-favicon', url),
+    getStoredFavicon: (url: string): Promise<string | null> =>
+      ipcRenderer.invoke('get-stored-favicon', url),
+    saveWebsiteFavicon: (url: string, faviconData: string): Promise<void> =>
+      ipcRenderer.invoke('save-website-favicon', url, faviconData),
+    getAllFavicons: (): Promise<Array<{url: string, favicon_data: string, updated_at: string}>> =>
+      ipcRenderer.invoke('get-all-favicons')
   },
   user: {
     registerUser: (username: string, password: string): Promise<number | undefined> =>
