@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3'
 import argon2 from 'argon2'
 import crypto from 'crypto'
-import { promisifyDatabase, PromisifiedDatabase, DatabaseRunResult } from '../utils'
+import { promisifyDatabase, PromisifiedDatabase } from '../utils'
 
 // 用户数据模型
 export interface User {
@@ -30,13 +30,13 @@ export class UsersTable {
   static async initialize(dbPath: string): Promise<PromisifiedDatabase> {
     const db = new sqlite3.Database(dbPath)
     const promisifiedDb = promisifyDatabase(db)
-    
+
     // 创建用户表
     await promisifiedDb.exec(this.getDDL())
-    
+
     // 创建索引
     await promisifiedDb.exec('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
-    
+
     return promisifiedDb
   }
 
@@ -49,7 +49,7 @@ export class UsersTable {
   static async hashPassword(password: string): Promise<string> {
     // 生成一个16字节的盐用于Argon2
     const argonSalt = crypto.randomBytes(16)
-    return await argon2.hash(password, { 
+    return await argon2.hash(password, {
       type: argon2.argon2id,
       salt: argonSalt,
       hashLength: 32,
@@ -74,11 +74,15 @@ export class UsersTable {
     }
   }
 
-  static async registerUser(db: any, username: string, masterPassword: string): Promise<number | undefined> {
+  static async registerUser(
+    db: PromisifiedDatabase,
+    username: string,
+    masterPassword: string
+  ): Promise<number | undefined> {
     try {
       const salt = this.generateSalt()
       const masterPasswordHash = await this.hashPassword(masterPassword)
-      
+
       const result = await db.run(
         `INSERT INTO users (username, master_password_hash, salt)
          VALUES (?, ?, ?)`,
@@ -91,17 +95,21 @@ export class UsersTable {
     }
   }
 
-  static async validateUser(db: any, username: string, masterPassword: string): Promise<boolean> {
+  static async validateUser(
+    db: PromisifiedDatabase,
+    username: string,
+    masterPassword: string
+  ): Promise<boolean> {
     try {
-      const user = await db.get<{master_password_hash: string, salt: string}>(
+      const user = await db.get<{ master_password_hash: string; salt: string }>(
         'SELECT master_password_hash, salt FROM users WHERE username = ?',
         [username]
       )
-      
+
       if (!user) {
         return false
       }
-      
+
       return await this.verifyPassword(user.master_password_hash, masterPassword)
     } catch (error) {
       console.error('Failed to validate user:', error)
@@ -109,12 +117,11 @@ export class UsersTable {
     }
   }
 
-  static async userExists(db: any, username: string): Promise<boolean> {
+  static async userExists(db: PromisifiedDatabase, username: string): Promise<boolean> {
     try {
-      const user = await db.get<{id: number}>(
-        'SELECT id FROM users WHERE username = ?',
-        [username]
-      )
+      const user = await db.get<{ id: number }>('SELECT id FROM users WHERE username = ?', [
+        username
+      ])
       return !!user
     } catch (error) {
       console.error('Failed to check if user exists:', error)
