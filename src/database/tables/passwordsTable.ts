@@ -1,5 +1,3 @@
-import sqlite3 from 'sqlite3'
-import { promisifyDatabase, PromisifiedDatabase } from '../utils'
 import { globalMemoryDatabase } from '../memoryDatabase'
 
 // 密码数据模型
@@ -77,7 +75,6 @@ export class PasswordsTable {
   static async getAllPasswords(): Promise<PasswordEntry[]> {
     try {
       const db = globalMemoryDatabase.getPromisifiedDb()
-      console.log('getAllPasswords', db)
       const rows = await db.all<DatabasePasswordEntry[]>(
         `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited as is_favorited,
                 datetime(created_at) as created_at,

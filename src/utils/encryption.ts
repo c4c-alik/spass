@@ -237,18 +237,33 @@ export class EncryptionManager {
   }
 
   /**
-   * 清除主密钥（锁定）
-   */
-  clearMasterKey(): void {
-    this.masterKey = null
-  }
-
-  /**
    * 检查是否已设置主密钥（是否已解锁）
    * @returns 是否已解锁
    */
   isUnlocked(): boolean {
     return this.masterKey !== null
+  }
+
+  /**
+   * 清除主密钥（锁定）
+   */
+  close(): void {
+    this.clearMasterKey()
+    this.clearUserId()
+  }
+
+  /**
+   * 清除主密钥（锁定）
+   */
+  private clearMasterKey(): void {
+    this.masterKey = null
+  }
+
+  /**
+   * 清除用户ID
+   */
+  private clearUserId(): void {
+    this.userId = null
   }
 }
 
