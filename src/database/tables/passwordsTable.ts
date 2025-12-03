@@ -1,5 +1,5 @@
 import sqlite3 from 'sqlite3'
-import { promisifyDatabase, PromisifiedDatabase, DatabaseRunResult } from '../utils'
+import { promisifyDatabase, PromisifiedDatabase } from '../utils'
 
 // 密码数据模型
 export interface PasswordEntry {
@@ -19,7 +19,10 @@ export interface PasswordEntry {
 
 // 定义内部使用的密码条目类型（数据库字段）
 // 用于数据库操作，将布尔类型的 isFavorited 转换为数字类型的 is_favorited
-export interface DatabasePasswordEntry extends Omit<PasswordEntry, 'isFavorited' | 'createdAt' | 'updatedAt'> {
+export interface DatabasePasswordEntry extends Omit<
+  PasswordEntry,
+  'isFavorited' | 'createdAt' | 'updatedAt'
+> {
   is_favorited?: number
   created_at?: string
   updated_at?: string
@@ -48,18 +51,21 @@ export class PasswordsTable {
   static async initialize(dbPath: string): Promise<PromisifiedDatabase> {
     const db = new sqlite3.Database(dbPath)
     const promisifiedDb = promisifyDatabase(db)
-    
+
     // 创建密码表
     await promisifiedDb.exec(this.getDDL())
-    
+
     // 创建索引
     await promisifiedDb.exec('CREATE INDEX IF NOT EXISTS idx_service ON passwords(service)')
     await promisifiedDb.exec('CREATE INDEX IF NOT EXISTS idx_group ON passwords("group")')
-    
+
     return promisifiedDb
   }
 
-  static async addPassword(db: any, password: PasswordEntry): Promise<number | undefined> {
+  static async addPassword(
+    db: PromisifiedDatabase,
+    password: PasswordEntry
+  ): Promise<number | undefined> {
     try {
       const result = await db.run(
         `INSERT INTO passwords (service, username, password, url, "group", notes, strength, favicon, is_favorited)
@@ -83,7 +89,7 @@ export class PasswordsTable {
     }
   }
 
-  static async getAllPasswords(db: any): Promise<PasswordEntry[]> {
+  static async getAllPasswords(db: PromisifiedDatabase): Promise<PasswordEntry[]> {
     try {
       const rows = await db.all<DatabasePasswordEntry[]>(
         `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited as is_favorited,
@@ -92,7 +98,7 @@ export class PasswordsTable {
          FROM passwords
          ORDER BY service`
       )
-      
+
       // 将 is_favorited (number) 转换为 isFavorited (boolean)
       return rows.map((row) => ({
         ...row,
@@ -106,7 +112,11 @@ export class PasswordsTable {
     }
   }
 
-  static async updatePassword(db: any, id: number, password: PasswordEntry): Promise<number> {
+  static async updatePassword(
+    db: PromisifiedDatabase,
+    id: number,
+    password: PasswordEntry
+  ): Promise<number> {
     try {
       if (!id) {
         throw new Error('Password ID is required for update')
@@ -145,16 +155,13 @@ export class PasswordsTable {
     }
   }
 
-  static async deletePassword(db: any, id: number): Promise<number> {
+  static async deletePassword(db: PromisifiedDatabase, id: number): Promise<number> {
     try {
       if (!id) {
         throw new Error('Password ID is required for deletion')
       }
 
-      const result = await db.run(
-        'DELETE FROM passwords WHERE id = ?',
-        [id]
-      )
+      const result = await db.run('DELETE FROM passwords WHERE id = ?', [id])
       return result.changes || 0
     } catch (error) {
       console.error('Failed to delete password:', error)
@@ -162,7 +169,10 @@ export class PasswordsTable {
     }
   }
 
-  static async searchPasswords(db: any, searchTerm: string): Promise<PasswordEntry[]> {
+  static async searchPasswords(
+    db: PromisifiedDatabase,
+    searchTerm: string
+  ): Promise<PasswordEntry[]> {
     try {
       const query = `%${searchTerm}%`
       const rows = await db.all<DatabasePasswordEntry[]>(
@@ -174,7 +184,7 @@ export class PasswordsTable {
          ORDER BY service`,
         [query, query]
       )
-      
+
       // 将 is_favorited (number) 转换为 isFavorited (boolean)
       return rows.map((row) => ({
         ...row,
@@ -188,7 +198,7 @@ export class PasswordsTable {
     }
   }
 
-  static async toggleFavorite(db: any, id: number): Promise<void> {
+  static async toggleFavorite(db: PromisifiedDatabase, id: number): Promise<void> {
     try {
       // 先获取当前收藏状态
       const row: { is_favorited: number } | undefined = await db.get<{ is_favorited: number }>(
