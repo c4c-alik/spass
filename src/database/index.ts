@@ -1,5 +1,5 @@
 import sqlite3 from 'sqlite3'
-import { UsersTable } from './auth/usersTable'
+import { AuthCenter } from './auth/authCenter'
 import { PromisifiedDatabase, promisifyDatabase } from './utils'
 
 export class DatabaseInitializer {
@@ -32,7 +32,7 @@ export class DatabaseInitializer {
     }
 
     // 初始化用户表
-    await this.db.exec(UsersTable.getDDL())
+    await this.db.exec(AuthCenter.getDDL())
 
     // 创建索引
     await this.createIndexes()
@@ -56,6 +56,6 @@ export class DatabaseInitializer {
   }
 
   static async initializeUsersDatabase(dbPath: string) {
-    return await UsersTable.initialize(dbPath)
+    return await AuthCenter.initialize(dbPath)
   }
 }
