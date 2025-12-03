@@ -15,16 +15,6 @@ export class FaviconsTable {
     `
   }
 
-  static async initialize(dbPath: string): Promise<PromisifiedDatabase> {
-    const db = new sqlite3.Database(dbPath)
-    const promisifiedDb = promisifyDatabase(db)
-
-    // 创建网站图标表
-    await promisifiedDb.exec(this.getDDL())
-
-    return promisifiedDb
-  }
-
   static async getStoredFavicon(url: string): Promise<string | null> {
     if (!url) return null
 

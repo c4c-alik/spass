@@ -7,11 +7,11 @@ import { promisifyDatabase, PromisifiedDatabase } from './utils'
 
 export class MemoryDatabase {
   private db: Database.Database | null = null
-  private dbPath: string
+  private promisifiedDb: PromisifiedDatabase | null = null
+  private dbPath: string = ':memory:'
 
   constructor() {
-    // 使用内存数据库
-    this.dbPath = ':memory:'
+    /* empty */
   }
 
   /**
@@ -25,6 +25,12 @@ export class MemoryDatabase {
         if (err) {
           reject(err)
         } else {
+          // 创建Promise包装的数据库对象
+          this.promisifiedDb = promisifyDatabase(this.db)
+          if (this.promisifiedDb) {
+            console.log('Database initialized')
+          }
+
           // 初始化数据库表
           this.db!.exec(PasswordsTable.getDDL(), (err) => {
             if (err) {
@@ -51,10 +57,6 @@ export class MemoryDatabase {
    * @returns Promise<void>
    */
   async loadFromBuffer(buffer: Buffer): Promise<void> {
-    if (!this.db) {
-      await this.init()
-    }
-
     // 将Buffer写入临时文件，使用唯一文件名避免冲突
     const tempPath = path.join(
       app.getPath('temp'),
@@ -180,6 +182,7 @@ export class MemoryDatabase {
             reject(err)
           } else {
             this.db = null
+            this.promisifiedDb = null
             resolve()
           }
         })
@@ -192,11 +195,11 @@ export class MemoryDatabase {
    * @returns PromisifiedDatabase
    */
   getPromisifiedDb(): PromisifiedDatabase {
-    if (!this.db) {
+    if (!this.promisifiedDb) {
       throw new Error('Database not initialized')
     }
 
-    return promisifyDatabase(this.db)
+    return this.promisifiedDb
   }
 
   /**
@@ -438,4 +441,3 @@ export class MemoryDatabase {
 export const globalMemoryDatabase = new MemoryDatabase()
 
 export default MemoryDatabase
-export type { PasswordEntry }
