@@ -1,5 +1,6 @@
 import sqlite3 from 'sqlite3'
 import { promisifyDatabase, PromisifiedDatabase } from '../utils'
+import { globalMemoryDatabase } from '../memoryDatabase'
 
 export class FaviconsTable {
   static getDDL(): string {
@@ -24,10 +25,11 @@ export class FaviconsTable {
     return promisifiedDb
   }
 
-  static async getStoredFavicon(db: PromisifiedDatabase, url: string): Promise<string | null> {
+  static async getStoredFavicon(url: string): Promise<string | null> {
     if (!url) return null
 
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       const row: { favicon_data: string } | undefined = await db.get(
         'SELECT favicon_data FROM favicons WHERE url = ?',
         [url]
@@ -40,13 +42,13 @@ export class FaviconsTable {
   }
 
   static async saveWebsiteFavicon(
-    db: PromisifiedDatabase,
     url: string,
     faviconData: string
   ): Promise<void> {
     if (!url || !faviconData) return
 
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       // 使用 INSERT OR REPLACE 确保URL唯一性
       await db.run(
         `
@@ -61,10 +63,9 @@ export class FaviconsTable {
     }
   }
 
-  static async getAllFavicons(
-    db: PromisifiedDatabase
-  ): Promise<Array<{ url: string; favicon_data: string; updated_at: string }>> {
+  static async getAllFavicons(): Promise<Array<{ url: string; favicon_data: string; updated_at: string }>> {
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       return await db.all('SELECT url, favicon_data, updated_at FROM favicons', [])
     } catch (error) {
       console.error('Failed to get all favicons:', error)

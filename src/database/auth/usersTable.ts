@@ -13,6 +13,9 @@ export interface User {
   updatedAt?: string
 }
 
+// 全局数据库连接变量
+let globalUserDb: PromisifiedDatabase
+
 export class UsersTable {
   static getDDL(): string {
     return `
@@ -28,6 +31,11 @@ export class UsersTable {
   }
 
   static async initialize(dbPath: string): Promise<PromisifiedDatabase> {
+    // 如果已经初始化过了，直接返回现有的连接
+    if (globalUserDb) {
+      return globalUserDb
+    }
+
     const db = new sqlite3.Database(dbPath)
     const promisifiedDb = promisifyDatabase(db)
 
@@ -36,6 +44,9 @@ export class UsersTable {
 
     // 创建索引
     await promisifiedDb.exec('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
+
+    // 设置全局数据库连接
+    globalUserDb = promisifiedDb
 
     return promisifiedDb
   }
@@ -74,16 +85,12 @@ export class UsersTable {
     }
   }
 
-  static async registerUser(
-    db: PromisifiedDatabase,
-    username: string,
-    masterPassword: string
-  ): Promise<number | undefined> {
+  static async registerUser(username: string, masterPassword: string): Promise<number | undefined> {
     try {
       const salt = this.generateSalt()
       const masterPasswordHash = await this.hashPassword(masterPassword)
 
-      const result = await db.run(
+      const result = await globalUserDb.run(
         `INSERT INTO users (username, master_password_hash, salt)
          VALUES (?, ?, ?)`,
         [username, masterPasswordHash, salt]
@@ -95,13 +102,9 @@ export class UsersTable {
     }
   }
 
-  static async validateUser(
-    db: PromisifiedDatabase,
-    username: string,
-    masterPassword: string
-  ): Promise<boolean> {
+  static async validateUser(username: string, masterPassword: string): Promise<boolean> {
     try {
-      const user = await db.get<{ master_password_hash: string; salt: string }>(
+      const user = await globalUserDb.get<{ master_password_hash: string; salt: string }>(
         'SELECT master_password_hash, salt FROM users WHERE username = ?',
         [username]
       )
@@ -117,14 +120,28 @@ export class UsersTable {
     }
   }
 
-  static async userExists(db: PromisifiedDatabase, username: string): Promise<boolean> {
+  static async userExists(username: string): Promise<boolean> {
     try {
-      const user = await db.get<{ id: number }>('SELECT id FROM users WHERE username = ?', [
-        username
-      ])
+      const user = await globalUserDb.get<{ id: number }>(
+        'SELECT id FROM users WHERE username = ?',
+        [username]
+      )
       return !!user
     } catch (error) {
       console.error('Failed to check if user exists:', error)
+      throw error
+    }
+  }
+
+  static async getUserByUsername(username: string): Promise<User | null> {
+    try {
+      const user = await globalUserDb.get<User>(
+        'SELECT id, username, master_password_hash, salt, created_at, updated_at FROM users WHERE username = ?',
+        [username]
+      )
+      return user || null
+    } catch (error) {
+      console.error('Failed to get user by username:', error)
       throw error
     }
   }
