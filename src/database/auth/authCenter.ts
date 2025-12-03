@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3'
 import argon2 from 'argon2'
 import crypto from 'crypto'
-import { promisifyDatabase, PromisifiedDatabase } from '../utils'
+import { PromisifiedDatabase, promisifyDatabase } from '../utils'
 
 // 用户数据模型
 export interface User {
@@ -16,7 +16,7 @@ export interface User {
 // 全局数据库连接变量
 let globalUserDb: PromisifiedDatabase
 
-export class UsersTable {
+export class AuthCenter {
   static getDDL(): string {
     return `
       CREATE TABLE IF NOT EXISTS users (

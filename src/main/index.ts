@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { UsersTable } from '../database/auth/usersTable'
+import { AuthCenter } from '../database/auth/authCenter'
 import { encryptionManager } from '../utils/encryption'
 import { MemoryDatabase } from '../database/memoryDatabase'
 import { PasswordsTable } from '../database/tables/passwordsTable'
@@ -68,9 +68,9 @@ app.whenReady().then(async () => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // 初始化数据库
+  // 认证中心初始化
+  await AuthCenter.initialize(userDbPath)
   memoryDb = new MemoryDatabase()
-  await UsersTable.initialize(userDbPath)
 
   createWindow()
 
@@ -493,7 +493,7 @@ ipcMain.handle('search-passwords', async (_event, query) => {
 // 用户认证相关IPC处理
 ipcMain.handle('register-user', async (_event, username, password) => {
   try {
-    return await UsersTable.registerUser(username, password)
+    return await AuthCenter.registerUser(username, password)
   } catch (error) {
     console.error('Failed to register user:', error)
     throw error
@@ -502,12 +502,12 @@ ipcMain.handle('register-user', async (_event, username, password) => {
 
 ipcMain.handle('validate-user', async (_event, username, password) => {
   try {
-    const isValid = await UsersTable.validateUser(username, password)
+    const isValid = await AuthCenter.validateUser(username, password)
 
     if (isValid) {
       try {
         // 获取用户信息以获取用户ID
-        const user = await UsersTable.getUserByUsername(username)
+        const user = await AuthCenter.getUserByUsername(username)
 
         if (user && user.id) {
           // 设置用户ID，用于创建用户特定的加密数据库文件
@@ -550,7 +550,7 @@ ipcMain.handle('validate-user', async (_event, username, password) => {
 
 ipcMain.handle('user-exists', async (_event, username) => {
   try {
-    return await UsersTable.userExists(username)
+    return await AuthCenter.userExists(username)
   } catch (error) {
     console.error('Failed to check if user exists:', error)
     throw error
