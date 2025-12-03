@@ -4,7 +4,7 @@ import { app } from 'electron'
 import path from 'path'
 import { promisify } from 'util'
 import { DatabasePasswordEntry, PasswordEntry, PasswordsTable } from './tables/passwordsTable'
-import { UsersTable } from './tables/usersTable'
+import { UsersTable } from './auth/usersTable'
 import { FaviconsTable } from './tables/faviconsTable'
 import { promisifyDatabase, PromisifiedDatabase, DatabaseRunResult } from './utils'
 
