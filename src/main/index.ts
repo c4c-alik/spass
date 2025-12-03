@@ -163,12 +163,8 @@ async function handleUserLogout(): Promise<void> {
     // 清除内存数据库
     await globalMemoryDatabase.close()
 
-    // 清除主密钥
-    encryptionManager.clearMasterKey()
-
-    // 清除用户ID
-    // 注意：这里我们不实际调用setUserId(null)，因为这会改变加密文件路径
-    // 而是在下次登录时自动设置新的用户ID
+    // 清理状态
+    encryptionManager.close()
 
     // 清除自动锁定定时器
     if (autoLockTimeout) {
@@ -199,8 +195,8 @@ function setupAutoLock(): void {
       // 清除内存数据库
       await globalMemoryDatabase.close()
 
-      // 清除主密钥
-      encryptionManager.clearMasterKey()
+      // 清理状态
+      encryptionManager.close()
 
       // 通知渲染进程应用已锁定
       if (mainWindow) {
@@ -569,8 +565,8 @@ ipcMain.handle('lock-application', async () => {
     // 清除内存数据库
     await globalMemoryDatabase.close()
 
-    // 清除主密钥
-    encryptionManager.clearMasterKey()
+    // 清理状态
+    encryptionManager.close()
 
     // 清除自动锁定定时器
     if (autoLockTimeout) {
