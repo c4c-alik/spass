@@ -1,5 +1,6 @@
 import sqlite3 from 'sqlite3'
 import { promisifyDatabase, PromisifiedDatabase } from '../utils'
+import { globalMemoryDatabase } from '../memoryDatabase'
 
 // 密码数据模型
 export interface PasswordEntry {
@@ -63,10 +64,10 @@ export class PasswordsTable {
   }
 
   static async addPassword(
-    db: PromisifiedDatabase,
     password: PasswordEntry
   ): Promise<number | undefined> {
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       const result = await db.run(
         `INSERT INTO passwords (service, username, password, url, "group", notes, strength, favicon, is_favorited)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -89,8 +90,9 @@ export class PasswordsTable {
     }
   }
 
-  static async getAllPasswords(db: PromisifiedDatabase): Promise<PasswordEntry[]> {
+  static async getAllPasswords(): Promise<PasswordEntry[]> {
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       const rows = await db.all<DatabasePasswordEntry[]>(
         `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited as is_favorited,
                 datetime(created_at) as created_at,
@@ -113,7 +115,6 @@ export class PasswordsTable {
   }
 
   static async updatePassword(
-    db: PromisifiedDatabase,
     id: number,
     password: PasswordEntry
   ): Promise<number> {
@@ -122,6 +123,7 @@ export class PasswordsTable {
         throw new Error('Password ID is required for update')
       }
 
+      const db = globalMemoryDatabase.getPromisifiedDb();
       const result = await db.run(
         `UPDATE passwords SET
           service = ?,
@@ -155,12 +157,13 @@ export class PasswordsTable {
     }
   }
 
-  static async deletePassword(db: PromisifiedDatabase, id: number): Promise<number> {
+  static async deletePassword(id: number): Promise<number> {
     try {
       if (!id) {
         throw new Error('Password ID is required for deletion')
       }
 
+      const db = globalMemoryDatabase.getPromisifiedDb();
       const result = await db.run('DELETE FROM passwords WHERE id = ?', [id])
       return result.changes || 0
     } catch (error) {
@@ -170,10 +173,10 @@ export class PasswordsTable {
   }
 
   static async searchPasswords(
-    db: PromisifiedDatabase,
     searchTerm: string
   ): Promise<PasswordEntry[]> {
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       const query = `%${searchTerm}%`
       const rows = await db.all<DatabasePasswordEntry[]>(
         `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited as is_favorited,
@@ -198,8 +201,9 @@ export class PasswordsTable {
     }
   }
 
-  static async toggleFavorite(db: PromisifiedDatabase, id: number): Promise<void> {
+  static async toggleFavorite(id: number): Promise<void> {
     try {
+      const db = globalMemoryDatabase.getPromisifiedDb();
       // 先获取当前收藏状态
       const row: { is_favorited: number } | undefined = await db.get<{ is_favorited: number }>(
         'SELECT is_favorited FROM passwords WHERE id = ?',

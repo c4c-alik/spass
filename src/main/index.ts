@@ -4,7 +4,9 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { UsersTable } from '../database/auth/usersTable'
 import { encryptionManager } from '../utils/encryption'
-import { MemoryDatabase } from '../database'
+import { MemoryDatabase } from '../database/memoryDatabase'
+import { PasswordsTable } from '../database/tables/passwordsTable'
+import { FaviconsTable } from '../database/tables/faviconsTable'
 import fetch from 'node-fetch'
 
 // 设置应用区域和语言
@@ -52,7 +54,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -68,6 +70,7 @@ app.whenReady().then(() => {
 
   // 初始化数据库
   memoryDb = new MemoryDatabase()
+  await UsersTable.initialize(userDbPath)
 
   createWindow()
 
@@ -204,7 +207,7 @@ ipcMain.handle('get-passwords', async () => {
     throw new Error('Application is locked')
   }
 
-  return await memoryDb.getAllPasswords()
+  return await PasswordsTable.getAllPasswords()
 })
 
 // 公共的KDBX模块加载和Argon2设置函数
@@ -431,7 +434,7 @@ ipcMain.handle('add-password', async (_event, passwordData) => {
     password: JSON.stringify(encryptionManager.encryptPassword(passwordData.password))
   }
 
-  const result = await memoryDb.addPassword(encryptedPasswordData)
+  const result = await PasswordsTable.addPassword(encryptedPasswordData)
 
   // 不再每次操作后保存到加密文件
 
@@ -446,7 +449,7 @@ ipcMain.handle('delete-password', async (_event, id) => {
     throw new Error('Application is locked')
   }
 
-  const result = await memoryDb.deletePassword(id)
+  const result = await PasswordsTable.deletePassword(id)
 
   // 不再每次操作后保存到加密文件
 
@@ -469,7 +472,7 @@ ipcMain.handle('update-password', async (_event, arg) => {
     password: JSON.stringify(encryptionManager.encryptPassword(passwordData.password))
   }
 
-  const result = await memoryDb.updatePassword(id, encryptedPasswordData)
+  const result = await PasswordsTable.updatePassword(id, encryptedPasswordData)
 
   // 不再每次操作后保存到加密文件
 
@@ -484,14 +487,13 @@ ipcMain.handle('search-passwords', async (_event, query) => {
     throw new Error('Application is locked')
   }
 
-  return await memoryDb.searchPasswords(query)
+  return await PasswordsTable.searchPasswords(query)
 })
 
 // 用户认证相关IPC处理
 ipcMain.handle('register-user', async (_event, username, password) => {
   try {
-    const db = await UsersTable.initialize(userDbPath)
-    return await UsersTable.registerUser(db, username, password)
+    return await UsersTable.registerUser(username, password)
   } catch (error) {
     console.error('Failed to register user:', error)
     throw error
@@ -500,15 +502,14 @@ ipcMain.handle('register-user', async (_event, username, password) => {
 
 ipcMain.handle('validate-user', async (_event, username, password) => {
   try {
-    const db = await UsersTable.initialize(userDbPath)
-    const isValid = await UsersTable.validateUser(db, username, password)
+    const isValid = await UsersTable.validateUser(username, password)
 
     if (isValid) {
       try {
         // 获取用户信息以获取用户ID
-        const user = await db.get<any>('SELECT id FROM users WHERE username = ?', [username])
+        const user = await UsersTable.getUserByUsername(username)
 
-        if (user) {
+        if (user && user.id) {
           // 设置用户ID，用于创建用户特定的加密数据库文件
           encryptionManager.setUserId(user.id.toString())
 
@@ -549,8 +550,7 @@ ipcMain.handle('validate-user', async (_event, username, password) => {
 
 ipcMain.handle('user-exists', async (_event, username) => {
   try {
-    const db = await UsersTable.initialize(userDbPath)
-    return await UsersTable.userExists(db, username)
+    return await UsersTable.userExists(username)
   } catch (error) {
     console.error('Failed to check if user exists:', error)
     throw error
@@ -618,7 +618,7 @@ ipcMain.handle('toggle-favorite', async (_event, id) => {
     throw new Error('Application is locked')
   }
 
-  const result = await memoryDb.toggleFavorite(id)
+  const result = await PasswordsTable.toggleFavorite(id)
 
   // 不再每次操作后保存到加密文件
 
@@ -720,7 +720,7 @@ ipcMain.handle('get-stored-favicon', async (_event, url) => {
   if (!url) return null
 
   try {
-    return await memoryDb.getStoredFavicon(url)
+    return await FaviconsTable.getStoredFavicon(url)
   } catch (error) {
     console.error('获取存储的favicon失败:', error)
     return null
@@ -732,7 +732,7 @@ ipcMain.handle('save-website-favicon', async (_event, url, faviconData) => {
   if (!url || !faviconData) return
 
   try {
-    await memoryDb.saveWebsiteFavicon(url, faviconData)
+    await FaviconsTable.saveWebsiteFavicon(url, faviconData)
   } catch (error) {
     console.error('保存网站favicon失败:', error)
   }
@@ -741,7 +741,7 @@ ipcMain.handle('save-website-favicon', async (_event, url, faviconData) => {
 // 获取所有favicon数据
 ipcMain.handle('get-all-favicons', async () => {
   try {
-    const favicons = await memoryDb.getAllFavicons()
+    const favicons = await FaviconsTable.getAllFavicons()
     return favicons
   } catch (error) {
     console.error('获取所有favicon数据失败:', error)
