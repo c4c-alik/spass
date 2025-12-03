@@ -13,20 +13,6 @@ const ENCRYPTION_CONFIG = {
   saltLength: 16
 }
 
-// 内存数据库接口
-export interface EncryptedPasswordEntry {
-  id?: number
-  service: string
-  username: string
-  password: string // 这里存储的是加密后的密码
-  url?: string
-  group?: string
-  notes?: string
-  strength?: 'weak' | 'medium' | 'strong'
-  createdAt?: string
-  updatedAt?: string
-}
-
 export class EncryptionManager {
   private masterKey: Buffer | null = null
   private dbPath: string
@@ -42,14 +28,22 @@ export class EncryptionManager {
   }
 
   /**
-   * 设置当前用户ID，用于创建用户特定的加密数据库文件
+   * 初始化加密管理器
    * @param userId 用户ID
+   * @param masterPassword 用户主密码
    */
-  setUserId(userId: string): void {
-    this.userId = userId
-    const userDataPath = app.getPath('userData')
-    // 为每个用户创建唯一的加密数据库文件
-    this.encryptedDbPath = path.join(userDataPath, `passwords_${userId}.db.encrypted`)
+  async init(userId: string, masterPassword: string): Promise<void> {
+    this.setUserId(userId)
+    await this.setMasterKey(masterPassword)
+  }
+
+  /**
+   * 设置主密钥
+   * @param masterPassword 用户主密码
+   */
+  private async setMasterKey(masterPassword: string): Promise<void> {
+    const salt = await this.getOrCreateSalt()
+    this.masterKey = await this.deriveKey(masterPassword, salt)
   }
 
   /**
@@ -58,7 +52,7 @@ export class EncryptionManager {
    * @param salt 盐值
    * @returns 派生的密钥
    */
-  async deriveKey(masterPassword: string, salt: Buffer): Promise<Buffer> {
+  private async deriveKey(masterPassword: string, salt: Buffer): Promise<Buffer> {
     // 直接使用argon2生成指定长度的密钥
     const key = await argon2.hash(masterPassword, {
       type: argon2.argon2id,
@@ -90,12 +84,14 @@ export class EncryptionManager {
   }
 
   /**
-   * 设置主密钥
-   * @param masterPassword 用户主密码
+   * 设置当前用户ID，用于创建用户特定的加密数据库文件
+   * @param userId 用户ID
    */
-  async setMasterKey(masterPassword: string): Promise<void> {
-    const salt = await this.getOrCreateSalt()
-    this.masterKey = await this.deriveKey(masterPassword, salt)
+  private setUserId(userId: string): void {
+    this.userId = userId
+    const userDataPath = app.getPath('userData')
+    // 为每个用户创建唯一的加密数据库文件
+    this.encryptedDbPath = path.join(userDataPath, `passwords_${userId}.db.encrypted`)
   }
 
   /**

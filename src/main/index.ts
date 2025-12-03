@@ -4,7 +4,7 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { AuthCenter } from '../database/auth/authCenter'
 import { encryptionManager } from '../utils/encryption'
-import { MemoryDatabase } from '../database/memoryDatabase'
+import { globalMemoryDatabase } from '../database/memoryDatabase'
 import { PasswordsTable } from '../database/tables/passwordsTable'
 import { FaviconsTable } from '../database/tables/faviconsTable'
 import fetch from 'node-fetch'
@@ -13,7 +13,6 @@ import fetch from 'node-fetch'
 app.commandLine.appendSwitch('lang', 'zh-CN')
 app.commandLine.appendSwitch('locale', 'zh-CN')
 
-let memoryDb: MemoryDatabase
 let autoLockTimeout: NodeJS.Timeout | null = null
 let autoLockTime = 30 * 60 * 1000 // 默认30分钟
 let mainWindow: BrowserWindow | null = null
@@ -70,7 +69,6 @@ app.whenReady().then(async () => {
 
   // 认证中心初始化
   await AuthCenter.initialize(userDbPath)
-  memoryDb = new MemoryDatabase()
 
   createWindow()
 
@@ -105,7 +103,7 @@ app.on('before-quit', async (event) => {
   try {
     // 在退出前保存内存数据库到加密文件
     await saveMemoryDbToEncryptedFile()
-    await memoryDb.close()
+    await globalMemoryDatabase.close()
   } catch (error) {
     console.error('Error during app quit:', error)
   } finally {
@@ -118,12 +116,41 @@ app.on('before-quit', async (event) => {
 async function saveMemoryDbToEncryptedFile(): Promise<void> {
   if (encryptionManager.isUnlocked()) {
     try {
-      const dbBuffer = await memoryDb.exportToBuffer()
-      // console.log(dbBuffer)
+      const dbBuffer = await globalMemoryDatabase.exportToBuffer()
       await encryptionManager.saveEncryptedDatabase(dbBuffer)
     } catch (error) {
       console.error('Failed to save encrypted database:', error)
     }
+  }
+}
+
+// 用户会话初始化
+async function initializeUserSession(userId: string, masterPassword: string): Promise<void> {
+  try {
+    // 内存数据库初始化
+    await globalMemoryDatabase.init()
+
+    // 初始化加密管理器
+    await encryptionManager.init(userId, masterPassword)
+
+    // 尝试加载已有的加密数据库
+    try {
+      const exists = await encryptionManager.encryptedDatabaseExists()
+      if (exists) {
+        const dbBuffer = await encryptionManager.loadEncryptedDatabase()
+        if (dbBuffer.length > 0) {
+          await globalMemoryDatabase.loadFromBuffer(dbBuffer)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load encrypted database:', error)
+    }
+
+    // 设置自动锁定
+    setupAutoLock()
+  } catch (error) {
+    console.error('Error during user session initialization:', error)
+    throw error
   }
 }
 
@@ -134,8 +161,7 @@ async function handleUserLogout(): Promise<void> {
     await saveMemoryDbToEncryptedFile()
 
     // 清除内存数据库
-    await memoryDb.close()
-    memoryDb = new MemoryDatabase()
+    await globalMemoryDatabase.close()
 
     // 清除主密钥
     encryptionManager.clearMasterKey()
@@ -171,8 +197,7 @@ function setupAutoLock(): void {
       await saveMemoryDbToEncryptedFile()
 
       // 清除内存数据库
-      await memoryDb.close()
-      memoryDb = new MemoryDatabase()
+      await globalMemoryDatabase.close()
 
       // 清除主密钥
       encryptionManager.clearMasterKey()
@@ -510,30 +535,8 @@ ipcMain.handle('validate-user', async (_event, username, password) => {
         const user = await AuthCenter.getUserByUsername(username)
 
         if (user && user.id) {
-          // 设置用户ID，用于创建用户特定的加密数据库文件
-          encryptionManager.setUserId(user.id.toString())
-
-          // 设置主密钥
-          await encryptionManager.setMasterKey(password)
-
-          // 初始化内存数据库
-          await memoryDb.init()
-
-          // 尝试加载已有的加密数据库
-          try {
-            const exists = await encryptionManager.encryptedDatabaseExists()
-            if (exists) {
-              const dbBuffer = await encryptionManager.loadEncryptedDatabase()
-              if (dbBuffer.length > 0) {
-                await memoryDb.loadFromBuffer(dbBuffer)
-              }
-            }
-          } catch (error) {
-            console.error('Failed to load encrypted database:', error)
-          }
-
-          // 设置自动锁定
-          setupAutoLock()
+          // 初始化用户会话
+          await initializeUserSession(user.id.toString(), password)
         }
       } catch (error) {
         console.error('Error during user session initialization:', error)
@@ -564,8 +567,7 @@ ipcMain.handle('lock-application', async () => {
     await saveMemoryDbToEncryptedFile()
 
     // 清除内存数据库
-    await memoryDb.close()
-    memoryDb = new MemoryDatabase()
+    await globalMemoryDatabase.close()
 
     // 清除主密钥
     encryptionManager.clearMasterKey()
