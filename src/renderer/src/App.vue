@@ -156,6 +156,12 @@ onBeforeUnmount(() => {
 }
 
 .lock-form {
-  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 50%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 </style>
