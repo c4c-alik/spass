@@ -22,7 +22,7 @@
           <Icon name="file-export" :width="24" :height="24" />
           <span>导出</span>
         </button>
-        <button class="btn" type="button" @click="lockApplication">
+        <button v-if="false" class="btn" type="button" @click="lockApplication">
           <Icon name="lock" :width="24" :height="24" />
           <span>锁屏</span>
         </button>
@@ -48,8 +48,8 @@
           v-model="searchQuery"
           type="text"
           placeholder="搜索密码..."
-          @input="searchPasswords"
           spellcheck="false"
+          @input="searchPasswords"
         />
         <button type="button">
           <Icon name="search" :width="24" :height="24" />
@@ -307,7 +307,8 @@ const categories = [
 
 // 监听应用锁定事件
 const handleAppLocked = (): void => {
-  window.dispatchEvent(new CustomEvent('lock'))
+  // 超时后直接退出到登录页而不是锁屏
+  window.dispatchEvent(new CustomEvent('logout'))
 }
 
 onMounted(async () => {
