@@ -280,6 +280,11 @@ export default defineComponent({
         getFaviconData(this.formData.url)
       }
 
+      // 获取并保存favicon
+      if (this.formData.url) {
+        getFaviconData(this.formData.url)
+      }
+
       // 如果是编辑模式且有原始密码对象，包含ID
       if (this.isEditing && this.password) {
         // 发送ID和更新的数据，确保ID在对象顶层
