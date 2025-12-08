@@ -99,10 +99,10 @@ export class MemoryDatabase {
       try {
         // 直接复制密码表数据
         await this.copyPasswordsFromTempDb()
-        
+
         // 复制favicons表数据
         await this.copyFaviconsFromTempDb()
-        
+
         // 删除临时文件
         await this.cleanupTempFile(tempPath)
       } catch (error) {
@@ -141,13 +141,13 @@ export class MemoryDatabase {
           // 在临时数据库中创建表
           await this.createPasswordsTableInTempDb(tempDb)
           await this.createFaviconsTableInTempDb(tempDb)
-          
+
           // 从内存数据库复制密码数据到临时数据库
           await this.exportPasswordsToTempDb(tempDb)
-          
+
           // 从内存数据库复制favicon数据到临时数据库
           await this.exportFaviconsToTempDb(tempDb)
-          
+
           // 关闭临时数据库连接后再读取文件内容
           await this.closeTempDbAndReadFile(tempDb, tempPath)
             .then(resolve)
@@ -168,7 +168,7 @@ export class MemoryDatabase {
    * @returns 临时文件的内容
    */
   private async closeTempDbAndReadFile(
-    tempDb: Database.Database, 
+    tempDb: Database.Database,
     tempPath: string
   ): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
