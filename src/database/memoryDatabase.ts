@@ -28,12 +28,14 @@ export class MemoryDatabase {
         }
 
         // 创建Promise包装的数据库对象
-        this.promisifiedDb = promisifyDatabase(this.db)
-        if (this.promisifiedDb) {
-          console.log('Database initialized')
+        if (this.db) {
+          this.promisifiedDb = promisifyDatabase(this.db)
+          if (this.promisifiedDb) {
+            console.log('Database initialized')
+          }
         }
 
-        resolve()
+        resolve(undefined)
       })
     }).then(() => this.initTables())
   }

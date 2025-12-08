@@ -13,6 +13,13 @@ asarUnpack:
   - resources/**
 win:
   executableName: spass
+  sign: false
+  signingHashAlgorithms: []
+  target: 
+    - target: nsis
+      arch: 
+        - x64
+  verifyUpdateCodeSignature: false
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -26,18 +33,18 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
+  identity: null
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
   target:
-    - AppImage
-    - snap
-    - deb
+    - target: tar.gz
+      arch: 
+        - x64
   maintainer: electronjs.org
   category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
 npmRebuild: false
+forceCodeSigning: false
 publish:
   provider: generic
   url: https://example.com/auto-updates

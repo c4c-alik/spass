@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+// @ts-ignore
 import { PasswordEntry } from '../database'
 
 // 定义 PasswordAPI 接口
