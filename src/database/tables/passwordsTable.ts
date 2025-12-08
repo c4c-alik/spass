@@ -76,7 +76,7 @@ export class PasswordsTable {
     try {
       const db = globalMemoryDatabase.getPromisifiedDb()
       const rows = await db.all<DatabasePasswordEntry[]>(
-        `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited as is_favorited,
+        `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited,
                 datetime(created_at) as created_at,
                 datetime(updated_at) as updated_at
          FROM passwords
@@ -85,7 +85,15 @@ export class PasswordsTable {
 
       // 将 is_favorited (number) 转换为 isFavorited (boolean)
       return rows.map((row) => ({
-        ...row,
+        id: row.id,
+        service: row.service,
+        username: row.username,
+        password: row.password,
+        url: row.url,
+        group: row.group,
+        notes: row.notes,
+        strength: row.strength,
+        favicon: row.favicon,
         isFavorited: row.is_favorited === 1,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -156,7 +164,7 @@ export class PasswordsTable {
       const db = globalMemoryDatabase.getPromisifiedDb()
       const query = `%${searchTerm}%`
       const rows = await db.all<DatabasePasswordEntry[]>(
-        `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited as is_favorited,
+        `SELECT id, service, username, password, url, "group", notes, strength, favicon, is_favorited,
                 datetime(created_at) as created_at,
                 datetime(updated_at) as updated_at
          FROM passwords
@@ -167,7 +175,15 @@ export class PasswordsTable {
 
       // 将 is_favorited (number) 转换为 isFavorited (boolean)
       return rows.map((row) => ({
-        ...row,
+        id: row.id,
+        service: row.service,
+        username: row.username,
+        password: row.password,
+        url: row.url,
+        group: row.group,
+        notes: row.notes,
+        strength: row.strength,
+        favicon: row.favicon,
         isFavorited: row.is_favorited === 1,
         createdAt: row.created_at,
         updatedAt: row.updated_at

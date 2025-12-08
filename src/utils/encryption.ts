@@ -126,7 +126,7 @@ export class EncryptionManager {
     const cipher = crypto.createCipheriv(ENCRYPTION_CONFIG.algorithm, this.masterKey, iv)
     let encrypted = cipher.update(plaintext, 'utf8', 'hex')
     encrypted += cipher.final('hex')
-    const authTag = cipher.getAuthTag()
+    const authTag = (cipher as any).getAuthTag()
 
     return {
       encrypted,
@@ -148,7 +148,7 @@ export class EncryptionManager {
     const iv = Buffer.from(encryptedData.iv, 'hex')
     const authTag = Buffer.from(encryptedData.authTag, 'hex')
     const decipher = crypto.createDecipheriv(ENCRYPTION_CONFIG.algorithm, this.masterKey, iv)
-    decipher.setAuthTag(authTag)
+    ;(decipher as any).setAuthTag(authTag)
 
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
@@ -169,7 +169,7 @@ export class EncryptionManager {
     const iv = crypto.randomBytes(ENCRYPTION_CONFIG.ivLength)
     const cipher = crypto.createCipheriv(ENCRYPTION_CONFIG.algorithm, this.masterKey, iv)
     const encrypted = Buffer.concat([cipher.update(dbData), cipher.final()])
-    const authTag = cipher.getAuthTag()
+    const authTag = (cipher as any).getAuthTag()
 
     // 将 IV、authTag 和加密数据组合在一起
     return Buffer.concat([iv, authTag, encrypted])
@@ -195,7 +195,7 @@ export class EncryptionManager {
     )
 
     const decipher = crypto.createDecipheriv(ENCRYPTION_CONFIG.algorithm, this.masterKey, iv)
-    decipher.setAuthTag(authTag)
+    ;(decipher as any).setAuthTag(authTag)
 
     return Buffer.concat([decipher.update(data), decipher.final()])
   }

@@ -281,7 +281,7 @@ async function setupKdbxEnvironment() {
         })
 
         // 返回Uint8Array格式结果
-        return new Uint8Array(rawResult)
+        return new Uint8Array(rawResult).buffer as ArrayBuffer
       } catch (error) {
         console.error('Error in Argon2 implementation:', error)
         throw error
@@ -393,10 +393,10 @@ ipcMain.handle('import-from-kdbx', async (_event, fileData, masterPassword) => {
       arrayBuffer = fileData.buffer.slice(
         fileData.byteOffset,
         fileData.byteOffset + fileData.byteLength
-      )
+      ) as ArrayBuffer
     } else {
       // 如果是普通数组，转换为 ArrayBuffer
-      arrayBuffer = new Uint8Array(fileData).buffer
+      arrayBuffer = new Uint8Array(fileData).buffer as ArrayBuffer
     }
 
     const db = await kdbxweb.Kdbx.load(arrayBuffer, credentials)
