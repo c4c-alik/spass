@@ -5,3 +5,6 @@ out
 .eslintcache
 *.log*
 .idea
+/.github/
+/.vscode/
+/build/
