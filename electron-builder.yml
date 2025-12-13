@@ -9,15 +9,16 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - 'src/renderer/src/assets/icons/**'
 asarUnpack:
   - resources/**
 win:
   executableName: spass
   sign: false
   signingHashAlgorithms: []
-  target: 
+  target:
     - target: nsis
-      arch: 
+      arch:
         - x64
   verifyUpdateCodeSignature: false
 nsis:
@@ -39,7 +40,7 @@ dmg:
 linux:
   target:
     - target: tar.gz
-      arch: 
+      arch:
         - x64
   maintainer: electronjs.org
   category: Utility
