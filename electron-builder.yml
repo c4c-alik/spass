@@ -3,6 +3,7 @@ productName: spass
 directories:
   buildResources: build
 files:
+  - 'out/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
