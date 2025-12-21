@@ -11,10 +11,21 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      skip_quality_check:
+        description: 'Skip quality check'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   quality:
     runs-on: ubuntu-latest
+    if: ${{ inputs.skip_quality_check != 'true' }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
@@ -36,6 +47,7 @@ jobs:
 
   build:
     needs: quality
+    if: ${{ !cancelled() }}
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
