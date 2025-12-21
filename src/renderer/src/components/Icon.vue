@@ -50,57 +50,25 @@ const iconWrapper = ref<HTMLElement | null>(null)
 let tooltipElement: HTMLElement | null = null
 
 // 图标映射表
-const iconMap: Record<string, string> = {
-  check: '/src/assets/icons/check.svg',
-  clock: '/src/assets/icons/clock.svg',
-  cog: '/src/assets/icons/cog.svg',
-  copy: '/src/assets/icons/copy.svg',
-  'credit-card': '/src/assets/icons/credit-card.svg',
-  dice: '/src/assets/icons/dice.svg',
-  edit: '/src/assets/icons/edit.svg',
-  'eye-off': '/src/assets/icons/eye-off.svg',
-  eye: '/src/assets/icons/eye.svg',
-  globe: '/src/assets/icons/globe.svg',
-  key: '/src/assets/icons/key.svg',
-  lock: '/src/assets/icons/lock.svg',
-  link: '/src/assets/icons/link.svg',
-  menu: '/src/assets/icons/menu.svg',
-  mobile: '/src/assets/icons/mobile.svg',
-  network: '/src/assets/icons/network.svg',
-  plus: '/src/assets/icons/plus.svg',
-  'plus-circle': '/src/assets/icons/plus-circle.svg',
-  search: '/src/assets/icons/search.svg',
-  shield: '/src/assets/icons/shield.svg',
-  'sign-out': '/src/assets/icons/sign-out.svg',
-  'star-filled': '/src/assets/icons/star-filled.svg',
-  star: '/src/assets/icons/star.svg',
-  sync: '/src/assets/icons/sync.svg',
-  trash: '/src/assets/icons/trash.svg',
-  user: '/src/assets/icons/user.svg',
-  x: '/src/assets/icons/x.svg',
-  'file-import': '/src/assets/icons/file-import.svg',
-  'file-export': '/src/assets/icons/file-export.svg',
-  'cloud-upload': '/src/assets/icons/cloud-upload.svg'
-}
+const iconModules = import.meta.glob('../assets/icons/*.svg', { as: 'raw' })
 
 const loadIcon = async (): Promise<void> => {
   try {
     const iconName = props.name
-    if (!iconMap[iconName]) {
-      console.warn(`Icon "${iconName}" not found in icon map`)
-      return
-    }
-
-    const response = await fetch(iconMap[iconName])
-    const svgText = await response.text()
-
-    // 提取SVG内容（去除svg标签本身）
-    const match = svgText.match(/<svg[^>]*>([\s\S]*)<\/svg>/)
-    if (match && match[1]) {
-      // 移除原始SVG中的width和height属性，让CSS控制大小
-      let cleanedSvgContent = svgText.replace(/width="[^"]*"/, '').replace(/height="[^"]*"/, '')
-      svgContent.value = cleanedSvgContent
-      innerContent.value = match[1]
+    const iconPath = `../assets/icons/${iconName}.svg`
+    
+    if (iconModules[iconPath]) {
+      const svgText = await iconModules[iconPath]()
+      // 提取SVG内容（去除svg标签本身）
+      const match = svgText.match(/<svg[^>]*>([\s\S]*)<\/svg>/)
+      if (match && match[1]) {
+        // 移除原始SVG中的width和height属性，让CSS控制大小
+        let cleanedSvgContent = svgText.replace(/width="[^"]*"/, '').replace(/height="[^"]*"/, '')
+        svgContent.value = cleanedSvgContent
+        innerContent.value = match[1]
+      }
+    } else {
+      console.warn(`Icon "${iconName}" not found in icon modules`)
     }
   } catch (error) {
     console.error(`Failed to load icon: ${props.name}`, error)

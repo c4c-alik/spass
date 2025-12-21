@@ -17,8 +17,10 @@
     "postinstall": "echo \"Skipping native module rebuild\"",
     "build:unpack": "electron-vite build && electron-builder --dir",
     "build:win": "electron-vite build && electron-builder --win",
+    "build:win-portable": "electron-vite build && electron-builder --win dir",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
+    "build:linux-portable": "electron-vite build && electron-builder --linux appimage",
     "build:all": "npm run build:win && npm run build:mac && npm run build:linux"
   },
   "dependencies": {

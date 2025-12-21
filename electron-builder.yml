@@ -10,15 +10,19 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - 'src/renderer/src/assets/icons/**'
+  - 'src/renderer/src/assets/**'
 asarUnpack:
   - resources/**
+  - '**/src/renderer/src/assets/icons/**'
 win:
   executableName: spass
   sign: false
   signingHashAlgorithms: []
   target:
     - target: nsis
+      arch:
+        - x64
+    - target: dir
       arch:
         - x64
   verifyUpdateCodeSignature: false
@@ -41,6 +45,9 @@ dmg:
 linux:
   target:
     - target: tar.gz
+      arch:
+        - x64
+    - target: AppImage
       arch:
         - x64
   maintainer: electronjs.org

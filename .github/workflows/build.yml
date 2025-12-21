@@ -85,7 +85,16 @@ jobs:
 
       - name: Build for Windows
         if: matrix.os == 'windows-latest'
-        run: npm run build:win
+        run: |
+          npm run build:win
+          npm run build:win-portable
+        shell: bash
+
+      - name: Package Windows Portable ZIP
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd dist
+          7z a -tzip spass-windows-portable.zip win-unpacked\*
         shell: bash
 
       - name: Build for macOS
@@ -95,7 +104,9 @@ jobs:
 
       - name: Build for Linux
         if: matrix.os == 'ubuntu-latest'
-        run: npm run build:linux
+        run: |
+          npm run build:linux
+          npm run build:linux-portable
         shell: bash
 
       - name: Upload Windows artifacts
@@ -103,7 +114,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*.zip
           if-no-files-found: error
 
       - name: Upload macOS artifacts
@@ -119,7 +132,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
-          path: dist/*.tar.gz
+          path: |
+            dist/*.tar.gz
+            dist/*.AppImage
           if-no-files-found: error
 
   release:
@@ -152,7 +167,9 @@ jobs:
         with:
           files: |
             dist/win/*.exe
+            dist/win/*.zip
             dist/mac/*.dmg
             dist/linux/*.tar.gz
+            dist/linux/*.AppImage
           draft: true
           prerelease: false
